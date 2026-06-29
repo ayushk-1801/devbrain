@@ -33,6 +33,7 @@ devbrain/
 │   ├── ingestion/
 │   │   ├── commits.py               # ingest_commit()
 │   │   ├── pull_requests.py         # ingest_pr()
+│   │   ├── issues.py                # ingest_issue()
 │   │   ├── adrs.py                  # ingest_adrs()
 │   │   └── codebase.py              # ingest_repo_structure()
 │   ├── memory/
