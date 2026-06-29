@@ -24,6 +24,7 @@ from mcp.server.fastmcp import FastMCP
 
 from backend import service
 from backend.config import settings
+from backend.ingestion import issues
 from backend.memory import client as memory
 
 logging.basicConfig(level=logging.INFO)
@@ -127,6 +128,25 @@ async def refresh_memory(repo: str | None = None) -> dict:
         repo: Optional "owner/repo". Omit to refresh every ingested repo.
     """
     return await service.refresh(repo)
+
+
+@mcp.tool()
+async def ingest_issues(owner: str, repo: str, sync_history_days: int | None = None) -> dict:
+    """Ingest a GitHub repo's closed issues and their comment discussions into DevBrain's memory.
+
+    Fetches closed issues and builds the knowledge graph with their discussion context.
+    Run this once per repo before querying issue-related questions. Use
+    `sync_history_days` to limit how far back issues are pulled.
+
+    Args:
+        owner: Repository owner as "owner".
+        repo: Repository name as "repo_name".
+        sync_history_days: Optional window (days) for issues. None = all closed issues.
+
+    Returns:
+        Per-source ingestion counts including issues.
+    """
+    return await service.full_sync(f"{owner}/{repo}", sync_history_days)
 
 
 def main() -> None:

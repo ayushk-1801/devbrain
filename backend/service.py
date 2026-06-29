@@ -13,14 +13,14 @@ from typing import Any
 
 from backend import registry
 from backend.config import split_repo
-from backend.ingestion import adrs, codebase, commits, pull_requests
+from backend.ingestion import adrs, codebase, commits, issues, pull_requests
 from backend.memory import improve as improve_mod
 from backend.memory.forget import deprecate_module
 from backend.memory.query import ask_devbrain
 
 
 async def full_sync(repo: str, sync_history_days: int | None = None) -> dict[str, Any]:
-    """Full historical sync of a repo (commits, PRs, ADRs, code structure).
+    """Full historical sync of a repo (commits, PRs, ADRs, issues, code structure).
 
     Records the repo in the registry so it participates in multi-repo listing
     and the weekly refresh. Returns per-source counts.
@@ -30,6 +30,7 @@ async def full_sync(repo: str, sync_history_days: int | None = None) -> dict[str
         "commits": await commits.ingest_commits(owner, name, since_days=sync_history_days),
         "prs": await pull_requests.ingest_prs(owner, name, since_days=sync_history_days),
         "adrs": await adrs.ingest_adrs(owner, name),
+        "issues": await issues.ingest_issues(owner, name, since_days=sync_history_days),
         "ast_modules": await codebase.ingest_repo_structure(owner, name),
     }
     registry.add_repo(repo)
@@ -53,6 +54,16 @@ async def ingest_single_pr(repo: str, number: int) -> None:
     owner, name = split_repo(repo)
     pr = github_client.fetch_pull_request(owner, name, number)
     await pull_requests.ingest_pr(owner, name, pr)
+    registry.add_repo(repo)
+
+
+async def ingest_single_issue(repo: str, number: int) -> None:
+    """Incremental ingest of one closed issue (used by the issue webhook)."""
+    from backend.ingestion import github_client
+
+    owner, name = split_repo(repo)
+    issue = github_client.fetch_issue(owner, name, number)
+    await issues.ingest_issue(owner, name, issue)
     registry.add_repo(repo)
 
 

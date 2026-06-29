@@ -10,8 +10,11 @@ from backend.memory import client as memory
 
 
 def _pr_payload(owner: str, repo: str, pr: dict[str, Any]) -> str:
-    comments = "\n".join(
+    review_comments = "\n".join(
         f"  - {c['author']}: {c['body']}" for c in pr.get("review_comments", [])
+    )
+    discussion_comments = "\n".join(
+        f"  - {c['author']}: {c['body']}" for c in pr.get("discussion_comments", [])
     )
     approvals = ", ".join(pr.get("approvals", [])) or "(none)"
     files = "\n".join(f"  - {f}" for f in pr.get("files_changed", []))
@@ -22,7 +25,8 @@ def _pr_payload(owner: str, repo: str, pr: dict[str, Any]) -> str:
         f"Approved by: {approvals}\n\n"
         f"## Description\n{pr['body'] or '(no description)'}\n\n"
         f"## Files changed\n{files or '  (none)'}\n\n"
-        f"## Review comments\n{comments or '  (none)'}\n"
+        f"## Review comments\n{review_comments or '  (none)'}\n\n"
+        f"## Discussion comments\n{discussion_comments or '  (none)'}\n"
     )
 
 

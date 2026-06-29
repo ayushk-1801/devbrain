@@ -18,6 +18,7 @@ from pydantic import BaseModel
 
 from backend import service
 from backend.config import settings, split_repo
+from backend.ingestion import issues
 from backend.memory import client as memory
 from backend.memory.improve import start_scheduler
 
@@ -135,6 +136,17 @@ async def _handle_pull_request(repo: str, payload: dict) -> None:
         logger.exception("failed to ingest PR #%s", pr.get("number"))
 
 
+async def _handle_issue(repo: str, payload: dict) -> None:
+    """Ingest a closed issue."""
+    issue = payload.get("issue", {})
+    if payload.get("action") != "closed" or not issue.get("closed_at"):
+        return
+    try:
+        await service.ingest_single_issue(repo, issue["number"])
+    except Exception:
+        logger.exception("failed to ingest issue #%s", issue.get("number"))
+
+
 @app.post("/webhook/github")
 async def github_webhook(request: Request) -> dict:
     """GitHub webhook receiver for push and pull_request events.
@@ -159,6 +171,8 @@ async def github_webhook(request: Request) -> dict:
         asyncio.create_task(_handle_push(full_name, payload))
     elif event == "pull_request":
         asyncio.create_task(_handle_pull_request(full_name, payload))
+    elif event == "issue":
+        asyncio.create_task(_handle_issue(full_name, payload))
     else:
         return {"status": "ignored", "event": event}
 
