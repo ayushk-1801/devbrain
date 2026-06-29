@@ -27,10 +27,11 @@ The backend auto-selects its memory backend at startup:
 ```
 GEMINI_API_KEY=...                              # required for local mode
 LLM_PROVIDER=gemini
-LLM_MODEL=gemini/gemini-2.0-flash-exp
+LLM_MODEL=gemini/gemini-3.1-flash-lite
 EMBEDDING_PROVIDER=gemini
-EMBEDDING_MODEL=gemini/text-embedding-004
-EMBEDDING_DIMENSIONS=768
+EMBEDDING_MODEL=gemini/gemini-embedding-2
+EMBEDDING_DIMENSIONS=3072
+COGNEE_SKIP_CONNECTION_TEST=true                # bypasses the 30s LLM preflight check
 ```
 
 ## Setup
@@ -49,16 +50,43 @@ Run on stdio (default):
 python -m backend.mcp_server
 ```
 
-Register with Claude Code:
+### OpenCode
+
+Add DevBrain to your `opencode.jsonc` — copy the example and fill in your tokens:
+
+```bash
+cp opencode.example.jsonc opencode.jsonc
+# edit opencode.jsonc with your paths, GITHUB_TOKEN, and GEMINI_API_KEY
+```
+
+Or register directly with the CLI:
+
+```bash
+opencode mcp add devbrain -- python -m backend.mcp_server
+opencode mcp env devbrain GITHUB_TOKEN ghp_xxx
+opencode mcp env devbrain GEMINI_API_KEY your_gemini_key
+opencode mcp env devbrain COGNEE_SKIP_CONNECTION_TEST true
+```
+
+List connected servers and auth status:
+
+```bash
+opencode mcp list
+```
+
+The server is fully multi-repo — every tool takes an explicit `repo` param.
+
+### Claude Code
+
+Register the MCP server with your GitHub and Gemini credentials:
 
 ```bash
 claude mcp add devbrain \
   --env GITHUB_TOKEN=ghp_xxx \
+  --env GEMINI_API_KEY=your_gemini_key \
+  --env COGNEE_SKIP_CONNECTION_TEST=true \
   -- python -m backend.mcp_server
 ```
-
-Supplied agent-side, so each user brings their own token. The server is fully
-multi-repo — every tool takes an explicit `repo` param.
 
 ### MCP Tools
 

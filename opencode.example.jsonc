@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "devbrain": {
+      "type": "local",
+      "command": ["/path/to/your/.venv/bin/python", "-m", "backend.mcp_server"],
+      "cwd": "/path/to/devbrain",
+      "timeout": 300000,
+      "environment": {
+        "GITHUB_TOKEN": "ghp_your_token_here",
+        "GEMINI_API_KEY": "your_gemini_key_here"
+      },
+      "enabled": true
+    }
+  }
+}

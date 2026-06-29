@@ -14,6 +14,9 @@ venv/
 # Environment secrets
 .env
 
+# OpenCode config (local MCP credentials)
+opencode.jsonc
+
 # Cognee local data
 .cognee/
 
