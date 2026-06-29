@@ -1,0 +1,9 @@
+cognee[gemini]
+mcp
+fastapi
+uvicorn[standard]
+PyGithub
+apscheduler
+python-dotenv
+httpx
+pydantic

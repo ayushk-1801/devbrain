@@ -1,0 +1,165 @@
+"""DevBrain FastAPI application (REST + GitHub webhook).
+
+This is one of two interfaces over the shared service layer (the other is the
+MCP server in ``backend/mcp_server.py``). Both are fully multi-repo: the repo is
+passed per request.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import hmac
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, HTTPException, Query, Request
+from pydantic import BaseModel
+
+from backend import service
+from backend.config import settings, split_repo
+from backend.memory import client as memory
+from backend.memory.improve import start_scheduler
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("devbrain")
+
+_scheduler = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await memory.connect()
+    global _scheduler
+    _scheduler = start_scheduler()
+    logger.info("DevBrain REST started in %s mode", settings.COGNEE_MODE)
+    try:
+        yield
+    finally:
+        if _scheduler:
+            _scheduler.shutdown(wait=False)
+        await memory.disconnect()
+
+
+app = FastAPI(title="DevBrain", version="0.1.0", lifespan=lifespan)
+
+
+# --- Models --------------------------------------------------------------
+
+
+class IngestRequest(BaseModel):
+    repo: str
+    sync_history_days: int | None = None
+
+
+# --- Routes --------------------------------------------------------------
+
+
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok", "cognee_mode": settings.COGNEE_MODE}
+
+
+@app.get("/repos")
+async def repos() -> dict:
+    """List all ingested repos."""
+    return {"repos": service.list_repos()}
+
+
+@app.post("/ingest")
+async def ingest(req: IngestRequest) -> dict:
+    """Full historical sync for a repo (commits, PRs, ADRs, code structure)."""
+    try:
+        return await service.full_sync(req.repo, req.sync_history_days)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/query")
+async def query(
+    q: str = Query(..., description="natural language question"),
+    repo: str | None = Query(None),
+    mode: str = Query("hybrid", description="hybrid | why | chunks"),
+) -> dict:
+    """Natural language recall over the knowledge graph."""
+    try:
+        return await service.query(q, repo=repo, mode=mode)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.delete("/module/{owner}/{repo}/{module}")
+async def prune_module(owner: str, repo: str, module: str) -> dict:
+    """Surgically prune a deprecated module's subgraph."""
+    try:
+        return await service.forget_module(f"{owner}/{repo}", module)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+# --- Webhook -------------------------------------------------------------
+
+
+def _verify_signature(body: bytes, signature: str | None) -> bool:
+    """Verify GitHub's X-Hub-Signature-256 HMAC against the configured secret."""
+    secret = settings.GITHUB_WEBHOOK_SECRET
+    if not secret:
+        # No secret configured -> skip verification (dev convenience only).
+        return True
+    if not signature or not signature.startswith("sha256="):
+        return False
+    expected = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, signature)
+
+
+async def _handle_push(repo: str, payload: dict) -> None:
+    """Incremental ingest of pushed commits (changed files only)."""
+    for commit_ref in payload.get("commits", []):
+        sha = commit_ref.get("id")
+        if not sha:
+            continue
+        try:
+            await service.ingest_single_commit(repo, sha)
+        except Exception:
+            logger.exception("failed to ingest pushed commit %s", sha)
+
+
+async def _handle_pull_request(repo: str, payload: dict) -> None:
+    """Ingest a merged pull request."""
+    pr = payload.get("pull_request", {})
+    if payload.get("action") != "closed" or not pr.get("merged"):
+        return
+    try:
+        await service.ingest_single_pr(repo, pr["number"])
+    except Exception:
+        logger.exception("failed to ingest PR #%s", pr.get("number"))
+
+
+@app.post("/webhook/github")
+async def github_webhook(request: Request) -> dict:
+    """GitHub webhook receiver for push and pull_request events.
+
+    Verifies the signature, then dispatches ingestion as a background task so the
+    webhook returns immediately (never block the response).
+    """
+    body = await request.body()
+    if not _verify_signature(body, request.headers.get("X-Hub-Signature-256")):
+        raise HTTPException(status_code=401, detail="invalid signature")
+
+    event = request.headers.get("X-GitHub-Event", "")
+    payload = await request.json()
+
+    full_name = payload.get("repository", {}).get("full_name", "")
+    if "/" not in full_name:
+        raise HTTPException(status_code=400, detail="missing repository.full_name")
+    # Validate shape early; the repo string itself is what the service needs.
+    split_repo(full_name)
+
+    if event == "push":
+        asyncio.create_task(_handle_push(full_name, payload))
+    elif event == "pull_request":
+        asyncio.create_task(_handle_pull_request(full_name, payload))
+    else:
+        return {"status": "ignored", "event": event}
+
+    return {"status": "accepted", "event": event}
