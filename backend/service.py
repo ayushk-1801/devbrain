@@ -11,12 +11,72 @@ from __future__ import annotations
 
 from typing import Any
 
+from arq import create_pool
+from arq.connections import RedisSettings
+
 from backend import registry
-from backend.config import split_repo
+from backend.config import settings, split_repo
 from backend.ingestion import adrs, codebase, commits, issues, pull_requests
-from backend.memory import improve as improve_mod
-from backend.memory.forget import deprecate_module
-from backend.memory.query import ask_devbrain
+
+# ---------------------------------------------------------------------------
+# ARQ queue helpers
+# ---------------------------------------------------------------------------
+
+async def get_queue():
+    """Return a connected ARQ Redis pool for enqueueing jobs."""
+    return await create_pool(RedisSettings.from_dsn(settings.REDIS_URL))
+
+
+async def enqueue_full_sync(repo: str, sync_history_days: int | None = None) -> str:
+    """Enqueue a full repo sync and return the job_id."""
+    queue = await get_queue()
+    job = await queue.enqueue_job("task_full_sync", repo, sync_history_days)
+    await queue.aclose()
+    return job.job_id
+
+
+async def enqueue_single_commit(repo: str, sha: str) -> str:
+    queue = await get_queue()
+    job = await queue.enqueue_job("task_ingest_commit", repo, sha)
+    await queue.aclose()
+    return job.job_id
+
+
+async def enqueue_single_pr(repo: str, number: int) -> str:
+    queue = await get_queue()
+    job = await queue.enqueue_job("task_ingest_pr", repo, number)
+    await queue.aclose()
+    return job.job_id
+
+
+async def enqueue_single_issue(repo: str, number: int) -> str:
+    queue = await get_queue()
+    job = await queue.enqueue_job("task_ingest_issue", repo, number)
+    await queue.aclose()
+    return job.job_id
+
+
+async def enqueue_pr_review_comment(repo: str, comment_id: int) -> str:
+    queue = await get_queue()
+    job = await queue.enqueue_job("task_ingest_pr_review_comment", repo, comment_id)
+    await queue.aclose()
+    return job.job_id
+
+
+async def get_job_status(job_id: str) -> dict[str, Any]:
+    """Return the current status and result of a queued job."""
+    from arq.jobs import Job, JobStatus
+    queue = await get_queue()
+    job = Job(job_id, redis=queue)
+    status = await job.status()
+    result: dict[str, Any] = {"job_id": job_id, "status": status.value}
+    if status == JobStatus.complete:
+        info = await job.result_info()
+        if info:
+            result["result"] = info.result
+            result["success"] = info.success if hasattr(info, "success") else True
+    await queue.aclose()
+    return result
 
 
 async def full_sync(repo: str, sync_history_days: int | None = None) -> dict[str, Any]:
@@ -78,14 +138,21 @@ async def ingest_pr_review_comment(repo: str, comment_id: int) -> None:
 
 
 async def query(question: str, repo: str | None = None, mode: str = "hybrid") -> dict[str, Any]:
-    """Natural-language recall over the knowledge graph."""
-    return await ask_devbrain(question, repo=repo, mode=mode)
+    """Natural-language recall — runs in the worker (concurrent with ingestion)."""
+    queue = await get_queue()
+    job = await queue.enqueue_job("task_query", question, repo, mode)
+    result = await job.result(timeout=60)
+    await queue.aclose()
+    return result
 
 
 async def forget_module(repo: str, module: str) -> dict[str, Any]:
-    """Surgically prune a deprecated module's subgraph."""
-    owner, name = split_repo(repo)
-    return await deprecate_module(owner, name, module)
+    """Surgically prune a deprecated module's subgraph via the worker."""
+    queue = await get_queue()
+    job = await queue.enqueue_job("task_forget_module", repo, module)
+    result = await job.result(timeout=60)
+    await queue.aclose()
+    return result
 
 
 def list_repos() -> list[str]:
@@ -94,9 +161,9 @@ def list_repos() -> list[str]:
 
 
 async def refresh(repo: str | None = None) -> dict[str, Any]:
-    """Run the (expensive) memify enrichment for one repo, or all if omitted."""
-    if repo:
-        await improve_mod.refresh_repo(repo)
-        return {"refreshed": [repo]}
-    await improve_mod.weekly_memory_refresh()
-    return {"refreshed": registry.list_repos()}
+    """Run the (expensive) memify enrichment via the worker."""
+    queue = await get_queue()
+    job = await queue.enqueue_job("task_refresh", repo)
+    result = await job.result(timeout=300)
+    await queue.aclose()
+    return result

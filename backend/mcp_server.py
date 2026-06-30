@@ -29,9 +29,16 @@ logger = logging.getLogger("devbrain.mcp")
 
 DEVBRAIN_API_URL = os.getenv("DEVBRAIN_API_URL", "http://localhost:8000").rstrip("/")
 
+_http: httpx.AsyncClient | None = None
+
+
+def _client() -> httpx.AsyncClient:
+    if _http is None:
+        raise RuntimeError("MCP server not initialised")
+    return _http
+
 
 def _raise_for_status(response: httpx.Response) -> None:
-    """Surface HTTP errors as readable MCP tool errors."""
     if response.is_error:
         raise RuntimeError(
             f"DevBrain API error {response.status_code}: {response.text[:200]}"
@@ -40,10 +47,12 @@ def _raise_for_status(response: httpx.Response) -> None:
 
 @asynccontextmanager
 async def lifespan(server: FastMCP) -> AsyncIterator[None]:
+    global _http
     async with httpx.AsyncClient(base_url=DEVBRAIN_API_URL, timeout=120) as client:
-        server.state.http = client
+        _http = client
         logger.info("DevBrain MCP client connected to %s", DEVBRAIN_API_URL)
         yield
+    _http = None
 
 
 mcp = FastMCP(
@@ -61,24 +70,41 @@ mcp = FastMCP(
 
 @mcp.tool()
 async def ingest_repo(repo: str, sync_history_days: int | None = None) -> dict:
-    """Ingest a GitHub repo's history into DevBrain's memory.
+    """Enqueue ingestion of a GitHub repo's history into DevBrain's memory.
 
-    Fetches commits, pull requests, issues, ADRs, and code structure and builds
-    the knowledge graph. Run this once per repo before querying. Use
-    `sync_history_days` to limit how far back history is pulled.
+    Returns immediately with a job_id. The actual ingestion (commits, PRs,
+    issues, ADRs, code structure) runs asynchronously in the background.
+    Use `job_status(job_id)` to check progress.
 
     Args:
         repo: Target repository as "owner/repo".
         sync_history_days: Optional window (days). None = all history.
 
     Returns:
-        Per-source ingestion counts.
+        {"job_id": "...", "status": "queued", "repo": "..."}
     """
-    client: httpx.AsyncClient = mcp.state.http
+    client = _client()
     body: dict = {"repo": repo}
     if sync_history_days is not None:
         body["sync_history_days"] = sync_history_days
     response = await client.post("/ingest", json=body)
+    _raise_for_status(response)
+    return response.json()
+
+
+@mcp.tool()
+async def job_status(job_id: str) -> dict:
+    """Check the status of an enqueued ingestion job.
+
+    Args:
+        job_id: The job_id returned by ingest_repo.
+
+    Returns:
+        {"job_id": "...", "status": "queued|in_progress|complete|not_found",
+         "result": {...}}  # result present when status is complete
+    """
+    client = _client()
+    response = await client.get(f"/jobs/{job_id}")
     _raise_for_status(response)
     return response.json()
 
@@ -96,7 +122,7 @@ async def query_devbrain(question: str, repo: str | None = None, mode: str = "hy
     Returns:
         A dict with the synthesized `answer` and supporting `results`.
     """
-    client: httpx.AsyncClient = mcp.state.http
+    client = _client()
     params: dict = {"q": question, "mode": mode}
     if repo:
         params["repo"] = repo
@@ -120,7 +146,7 @@ async def forget_module(repo: str, module: str) -> dict:
         Status of the prune operation.
     """
     owner, name = repo.split("/", 1)
-    client: httpx.AsyncClient = mcp.state.http
+    client = _client()
     response = await client.delete(f"/module/{owner}/{name}/{module}")
     _raise_for_status(response)
     return response.json()
@@ -129,7 +155,7 @@ async def forget_module(repo: str, module: str) -> dict:
 @mcp.tool()
 async def list_repos() -> dict:
     """List all repositories that have been ingested into DevBrain."""
-    client: httpx.AsyncClient = mcp.state.http
+    client = _client()
     response = await client.get("/repos")
     _raise_for_status(response)
     return response.json()
@@ -145,7 +171,7 @@ async def refresh_memory(repo: str | None = None) -> dict:
     Args:
         repo: Optional "owner/repo". Omit to refresh every ingested repo.
     """
-    client: httpx.AsyncClient = mcp.state.http
+    client = _client()
     params: dict = {}
     if repo:
         params["repo"] = repo

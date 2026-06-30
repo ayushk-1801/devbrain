@@ -11,9 +11,11 @@ sourced provenance.
 
 ```
 [Maintainer's server]
-  FastAPI backend  ←  GitHub webhooks (push, PR, issues, review comments)
-    ├── GitHub Token + Cognee + LLM keys (stays on server)
-    └── REST API  (:8000)
+  FastAPI API  (:8000)  ←  GitHub webhooks (push, PR, issues, review comments)
+    └── enqueues jobs to Redis
+  ARQ Worker               ←  runs ingestion + queries (holds the single Kuzu connection)
+    └── GitHub Token + Cognee + LLM keys (stays on server)
+  Redis  (:6379)           ←  job queue + result store
 
           ↕  HTTP
 
@@ -25,6 +27,10 @@ sourced provenance.
 A maintainer hosts one backend. Every user on the team points the lightweight MCP
 client at that URL — no GitHub token, no Cognee config, no LLM keys required on
 the user's side.
+
+The API process never touches the graph DB directly. All Cognee/Kuzu access happens
+inside the ARQ worker, which holds a single connection and runs ingestion and queries
+concurrently as asyncio tasks — no lock conflicts.
 
 ---
 
@@ -56,6 +62,8 @@ COGNEE_BASE_URL=...         # your hosted Cognee instance URL
 
 # Option B: Local Gemini (no extra infra, good for solo/small teams)
 GEMINI_API_KEY=...          # from https://aistudio.google.com/apikey
+GEMINI_API_KEY_2=...        # optional backup key — rotated automatically on 429
+GEMINI_API_KEY_3=...        # optional backup key
 LLM_MODEL=gemini/gemini-2.0-flash-exp
 EMBEDDING_MODEL=gemini/text-embedding-004
 EMBEDDING_DIMENSIONS=768
@@ -69,17 +77,33 @@ GITHUB_WEBHOOK_SECRET=...   # any random string; paste the same into GitHub's we
 GITHUB_REPO=owner/repo-name
 ```
 
+> **Rate limits:** The Gemini free tier allows 100 embedding requests/minute. Set
+> `GEMINI_API_KEY_2` and `GEMINI_API_KEY_3` to additional keys and DevBrain will
+> automatically rotate to the next key when a 429 is hit.
+
 ### 3. Start the backend
 
+**Docker (recommended):**
+
 ```bash
+docker compose up
+```
+
+This starts three services: `devbrain-api` (REST on :8000), `devbrain-worker` (ARQ
+job runner), and `redis` (job queue). A shared volume persists the knowledge graph
+across restarts.
+
+**Without Docker:**
+
+```bash
+# Terminal 1 — API
 uvicorn backend.main:app --host 0.0.0.0 --port 8000
+
+# Terminal 2 — worker (required; handles all DB access)
+python -m arq backend.worker.WorkerSettings
 ```
 
-Or with Docker:
-
-```bash
-docker-compose up devbrain-api
-```
+Both processes must run together. The API enqueues jobs; the worker executes them.
 
 ### 4. Ingest a repo
 
@@ -89,15 +113,31 @@ curl -X POST http://localhost:8000/ingest \
   -d '{"repo": "owner/your-repo", "sync_history_days": 90}'
 ```
 
-This pulls 90 days of commits, PRs, issues, ADRs, and code structure into the
-knowledge graph. The response includes per-source counts:
+Ingestion is asynchronous. The response returns a `job_id` immediately:
+
+```json
+{ "job_id": "a1b2c3...", "status": "queued", "repo": "owner/your-repo" }
+```
+
+Poll for completion:
+
+```bash
+curl http://localhost:8000/jobs/a1b2c3...
+```
 
 ```json
 {
-  "repo": "owner/your-repo",
-  "ingested": { "commits": 312, "prs": 47, "issues": 83, "adrs": 6, "ast_modules": 24 }
+  "job_id": "a1b2c3...",
+  "status": "complete",
+  "success": true,
+  "result": {
+    "repo": "owner/your-repo",
+    "ingested": { "commits": 312, "prs": 47, "issues": 83, "adrs": 6, "ast_modules": 24 }
+  }
 }
 ```
+
+Omit `sync_history_days` to ingest the full history.
 
 ### 5. Set up GitHub webhooks
 
@@ -112,7 +152,6 @@ In your repo: **Settings → Webhooks → Add webhook**
 | | `Pushes` |
 | | `Pull requests` |
 | | `Issues` |
-| | `Issue comments` |
 | | `Pull request review comments` |
 
 For local development, expose the backend with:
@@ -133,8 +172,7 @@ in the webhook delivery log.
 | Push | Every commit that touches files |
 | Pull request | Opened, edited, updated, and merged |
 | Issues | Opened, labeled, and closed |
-| Issue comment | Any new comment on an issue or PR conversation thread |
-| PR review comment | Any new inline code review comment |
+| PR review comment | New inline code review comment |
 
 ---
 
@@ -215,16 +253,13 @@ You should see the repos the maintainer has already ingested.
 
 ## REST API reference
 
-```bash
-uvicorn backend.main:app --reload --port 8000
-```
-
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET`  | `/health` | Status check |
 | `GET`  | `/repos` | List all ingested repos |
-| `POST` | `/ingest` | Full historical sync (`{"repo": "owner/repo", "sync_history_days": 90}`) |
-| `GET`  | `/query?q=...&repo=...&mode=...` | Natural language recall |
+| `POST` | `/ingest` | Enqueue full historical sync (`{"repo": "owner/repo", "sync_history_days": 90}`) — returns `job_id` |
+| `GET`  | `/jobs/{job_id}` | Poll job status (`queued` / `in_progress` / `complete`) |
+| `GET`  | `/query?q=...&repo=...&mode=...` | Natural language recall (synchronous) |
 | `POST` | `/refresh?repo=...` | Run memify for one repo (omit `repo` for all) |
 | `DELETE` | `/module/{owner}/{repo}/{module}` | Surgical module pruning |
 | `POST` | `/webhook/github` | GitHub webhook receiver (HMAC-verified) |
@@ -232,6 +267,12 @@ uvicorn backend.main:app --reload --port 8000
 ### curl examples
 
 ```bash
+# Ingest and poll
+JOB=$(curl -s -X POST localhost:8000/ingest \
+  -H 'Content-Type: application/json' \
+  -d '{"repo": "owner/your-repo"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['job_id'])")
+curl "localhost:8000/jobs/$JOB"
+
 # Query
 curl "localhost:8000/query?q=why+was+auth+refactored&repo=owner/your-repo&mode=why"
 

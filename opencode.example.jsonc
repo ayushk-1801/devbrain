@@ -1,16 +1,37 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
+
+    // -----------------------------------------------------------------------
+    // Option A: Docker (recommended for users)
+    // No Python, no venv, no dependencies needed — just Docker + the backend URL.
+    // Build once: docker build -t devbrain .
+    // -----------------------------------------------------------------------
     "devbrain": {
       "type": "local",
-      "command": ["/path/to/your/.venv/bin/python", "-m", "backend.mcp_server"],
-      "cwd": "/path/to/devbrain",
-      "timeout": 300000,
-      "environment": {
-        "GITHUB_TOKEN": "ghp_your_token_here",
-        "GEMINI_API_KEY": "your_gemini_key_here"
-      },
+      "command": [
+        "docker", "run", "--rm", "-i",
+        "-e", "DEVBRAIN_API_URL=http://host.docker.internal:8000",
+        "devbrain",
+        "python", "-m", "backend.mcp_server"
+      ],
+      "timeout": 120000,
       "enabled": true
     }
+
+    // -----------------------------------------------------------------------
+    // Option B: Local venv (for contributors / maintainers who have the repo)
+    // -----------------------------------------------------------------------
+    // "devbrain": {
+    //   "type": "local",
+    //   "command": ["/path/to/devbrain/.venv/bin/python", "-m", "backend.mcp_server"],
+    //   "cwd": "/path/to/devbrain",
+    //   "timeout": 120000,
+    //   "environment": {
+    //     "DEVBRAIN_API_URL": "http://localhost:8000"
+    //   },
+    //   "enabled": true
+    // }
+
   }
 }

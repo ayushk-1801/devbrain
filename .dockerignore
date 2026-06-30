@@ -1,0 +1,11 @@
+.env
+.venv
+__pycache__
+*.pyc
+.cognee/
+.devbrain/
+.git/
+.claude/
+frontend/
+cognee-mcp/
+*.md

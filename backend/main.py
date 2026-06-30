@@ -7,7 +7,6 @@ passed per request.
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import hmac
 import logging
@@ -18,27 +17,17 @@ from pydantic import BaseModel
 
 from backend import service
 from backend.config import settings, split_repo
-from backend.memory import client as memory
-from backend.memory.improve import start_scheduler
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("devbrain")
 
-_scheduler = None
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await memory.connect()
-    global _scheduler
-    _scheduler = start_scheduler()
+    # The API process never opens Kuzu directly — all DB access goes through
+    # the ARQ worker, which holds the single Kuzu connection.
     logger.info("DevBrain REST started in %s mode", settings.COGNEE_MODE)
-    try:
-        yield
-    finally:
-        if _scheduler:
-            _scheduler.shutdown(wait=False)
-        await memory.disconnect()
+    yield
 
 
 app = FastAPI(title="DevBrain", version="0.1.0", lifespan=lifespan)
@@ -68,11 +57,18 @@ async def repos() -> dict:
 
 @app.post("/ingest")
 async def ingest(req: IngestRequest) -> dict:
-    """Full historical sync for a repo (commits, PRs, issues, ADRs, code structure)."""
+    """Enqueue a full historical sync for a repo. Returns a job_id immediately."""
     try:
-        return await service.full_sync(req.repo, req.sync_history_days)
+        job_id = await service.enqueue_full_sync(req.repo, req.sync_history_days)
+        return {"job_id": job_id, "status": "queued", "repo": req.repo}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/jobs/{job_id}")
+async def job_status(job_id: str) -> dict:
+    """Poll the status of an enqueued job. Status: queued | in_progress | complete | not_found."""
+    return await service.get_job_status(job_id)
 
 
 @app.get("/query")
@@ -122,51 +118,55 @@ def _verify_signature(body: bytes, signature: str | None) -> bool:
 
 
 async def _handle_push(repo: str, payload: dict) -> None:
-    """Incremental ingest of pushed commits (changed files only)."""
+    """Enqueue incremental ingest for each pushed commit."""
     for commit_ref in payload.get("commits", []):
         sha = commit_ref.get("id")
         if not sha:
             continue
         try:
-            await service.ingest_single_commit(repo, sha)
+            job_id = await service.enqueue_single_commit(repo, sha)
+            logger.info("enqueued commit %s → job %s", sha, job_id)
         except Exception:
-            logger.exception("failed to ingest pushed commit %s", sha)
+            logger.exception("failed to enqueue pushed commit %s", sha)
 
 
 async def _handle_pull_request(repo: str, payload: dict) -> None:
-    """Ingest a PR on open/edit/sync (captures discussion before merge) and on merge."""
+    """Enqueue PR ingest on open/edit/sync and on merge."""
     action = payload.get("action")
     pr = payload.get("pull_request", {})
     if action not in ("opened", "edited", "synchronize", "closed"):
         return
     if action == "closed" and not pr.get("merged"):
-        return  # closed without merging — skip
+        return
     try:
-        await service.ingest_single_pr(repo, pr["number"])
+        job_id = await service.enqueue_single_pr(repo, pr["number"])
+        logger.info("enqueued PR #%s → job %s", pr["number"], job_id)
     except Exception:
-        logger.exception("failed to ingest PR #%s", pr.get("number"))
+        logger.exception("failed to enqueue PR #%s", pr.get("number"))
 
 
 async def _handle_issue(repo: str, payload: dict) -> None:
-    """Ingest an issue when opened, labeled, or closed."""
+    """Enqueue issue ingest when opened, labeled, or closed."""
     if payload.get("action") not in ("opened", "labeled", "closed"):
         return
     issue = payload.get("issue", {})
     try:
-        await service.ingest_single_issue(repo, issue["number"])
+        job_id = await service.enqueue_single_issue(repo, issue["number"])
+        logger.info("enqueued issue #%s → job %s", issue["number"], job_id)
     except Exception:
-        logger.exception("failed to ingest issue #%s", issue.get("number"))
+        logger.exception("failed to enqueue issue #%s", issue.get("number"))
 
 
 async def _handle_pr_review_comment(repo: str, payload: dict) -> None:
-    """Ingest a newly created PR inline review comment."""
+    """Enqueue ingest of a newly created PR inline review comment."""
     if payload.get("action") != "created":
         return
     comment = payload.get("comment", {})
     try:
-        await service.ingest_pr_review_comment(repo, comment["id"])
+        job_id = await service.enqueue_pr_review_comment(repo, comment["id"])
+        logger.info("enqueued review comment %s → job %s", comment["id"], job_id)
     except Exception:
-        logger.exception("failed to ingest PR review comment #%s", comment.get("id"))
+        logger.exception("failed to enqueue PR review comment #%s", comment.get("id"))
 
 
 _WEBHOOK_DISPATCH = {
@@ -198,6 +198,6 @@ async def github_webhook(request: Request) -> dict:
 
     handler = _WEBHOOK_DISPATCH.get(event)
     if handler:
-        asyncio.create_task(handler(full_name, payload))
+        await handler(full_name, payload)
         return {"status": "accepted", "event": event}
     return {"status": "ignored", "event": event}
