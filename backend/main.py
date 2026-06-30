@@ -68,7 +68,7 @@ async def repos() -> dict:
 
 @app.post("/ingest")
 async def ingest(req: IngestRequest) -> dict:
-    """Full historical sync for a repo (commits, PRs, ADRs, code structure)."""
+    """Full historical sync for a repo (commits, PRs, issues, ADRs, code structure)."""
     try:
         return await service.full_sync(req.repo, req.sync_history_days)
     except ValueError as exc:

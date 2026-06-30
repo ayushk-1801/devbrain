@@ -1,4 +1,4 @@
-"""Issue ingestion: structures GitHub issue data into a memory payload and remembers it."""
+"""Issue ingestion: structures issue context (discussion decisions) into memory."""
 
 from __future__ import annotations
 
@@ -12,6 +12,9 @@ from backend.memory import client as memory
 def _issue_payload(owner: str, repo: str, issue: dict[str, Any]) -> str:
     labels = ", ".join(issue.get("labels", [])) or "(none)"
     closed = issue.get("closed_at") or "-"
+    comments = "\n".join(
+        f"  - {c['author']}: {c['body']}" for c in issue.get("comments", [])
+    )
     return (
         f"# Issue #{issue['number']} in {owner}/{repo}: {issue['title']}\n\n"
         f"Author: {issue['author']}\n"
@@ -19,7 +22,8 @@ def _issue_payload(owner: str, repo: str, issue: dict[str, Any]) -> str:
         f"Labels: {labels}\n"
         f"Created: {issue['created_at']}\n"
         f"Closed: {closed}\n\n"
-        f"## Description\n{issue['body'] or '(no description)'}\n"
+        f"## Description\n{issue['body'] or '(no description)'}\n\n"
+        f"## Comments\n{comments or '  (none)'}\n"
     )
 
 

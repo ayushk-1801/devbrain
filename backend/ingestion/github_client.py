@@ -92,6 +92,10 @@ def _pr_to_dict(pr) -> dict[str, Any]:
         {"author": c.user.login if c.user else "unknown", "body": c.body}
         for c in pr.get_review_comments()
     ]
+    discussion_comments = [
+        {"author": c.user.login if c.user else "unknown", "body": c.body}
+        for c in pr.get_issue_comments()
+    ]
     approvals = [
         r.user.login
         for r in pr.get_reviews()
@@ -105,6 +109,7 @@ def _pr_to_dict(pr) -> dict[str, Any]:
         "merged_at": pr.merged_at.isoformat() if pr.merged_at else "",
         "files_changed": [f.filename for f in pr.get_files()],
         "review_comments": review_comments,
+        "discussion_comments": discussion_comments,
         "approvals": approvals,
     }
 
@@ -134,6 +139,10 @@ def fetch_issue(owner: str, repo: str, number: int) -> dict[str, Any]:
 
 
 def _issue_to_dict(issue) -> dict[str, Any]:
+    comments = [
+        {"author": c.user.login if c.user else "unknown", "body": c.body}
+        for c in issue.get_comments()
+    ]
     return {
         "number": issue.number,
         "title": issue.title,
@@ -143,6 +152,7 @@ def _issue_to_dict(issue) -> dict[str, Any]:
         "labels": [label.name for label in issue.labels],
         "created_at": issue.created_at.isoformat() if issue.created_at else "",
         "closed_at": issue.closed_at.isoformat() if issue.closed_at else "",
+        "comments": comments,
     }
 
 
@@ -197,3 +207,43 @@ def fetch_repo_tree(owner: str, repo: str) -> dict[str, Any]:
         if el.type == "blob"
     ]
     return {"default_branch": branch, "files": files}
+
+
+def fetch_issue(owner: str, repo: str, number: int) -> dict[str, Any]:
+    """Return a single issue (used by the issue webhook)."""
+    gh_repo = _get_repo(owner, repo)
+    return _issue_to_dict(gh_repo.get_issue(number))
+
+
+def fetch_issues(owner: str, repo: str, since_days: Optional[int] = None) -> list[dict[str, Any]]:
+    """Return closed issues as plain dicts, optionally limited to the last N days."""
+    from datetime import datetime, timedelta, timezone
+
+    gh_repo = _get_repo(owner, repo)
+    query = "is:closed"
+    if since_days:
+        since = datetime.now(timezone.utc) - timedelta(days=since_days)
+        query += f" created:{since.isoformat()}"
+
+    out: list[dict[str, Any]] = []
+    for issue in gh_repo.get_issues(state="closed", sort="updated", direction="desc", filter="all"):
+        if issue.state != "closed":
+            continue
+        out.append(_issue_to_dict(issue))
+    return out
+
+
+def _issue_to_dict(issue) -> dict[str, Any]:
+    comments = [
+        {"author": c.user.login if c.user else "unknown", "body": c.body}
+        for c in issue.comments or []
+    ]
+    return {
+        "number": issue.number,
+        "title": issue.title,
+        "body": issue.body or "",
+        "author": issue.user.login if issue.user else "unknown",
+        "closed_at": issue.closed_at.isoformat() if issue.closed_at else "",
+        "state": issue.state,
+        "comments": comments,
+    }
