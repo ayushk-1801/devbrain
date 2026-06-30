@@ -1,104 +1,219 @@
 # DevBrain
 
 A living engineering memory for software teams. DevBrain ingests GitHub commits, pull
-requests, ADRs, and codebase structure into [Cognee](https://www.cognee.ai)'s hybrid
-graph + vector memory, then answers *"why was this changed?"* questions with sourced
-provenance.
+requests, issues, ADRs, and codebase structure into [Cognee](https://www.cognee.ai)'s
+hybrid graph + vector memory, then answers *"why was this changed?"* questions with
+sourced provenance.
 
-DevBrain exposes **two interfaces** over a shared multi-repo service layer:
+---
 
-- **MCP server** (`backend/mcp_server.py`) — for AI coding agents (Claude Code, Cursor, etc.)
-- **REST API** (`backend/main.py`) — for humans, curl, and GitHub webhooks
-
-## Cognee mode (cloud or local)
-
-The backend auto-selects its memory backend at startup:
-
-- **Local (default)** — used when `COGNEE_API_KEY` is empty. Self-hosted Cognee with
-  file-based stores (Kuzu graph + LanceDB vector + SQLite) under `COGNEE_DATA_DIR` /
-  `COGNEE_SYSTEM_DIR`. **LLM + embeddings are served by Google Gemini**, so the only key
-  you need is `GEMINI_API_KEY` (get one at https://aistudio.google.com/apikey). No OpenAI
-  key required. Installs via the `cognee[gemini]` extra.
-- **Cognee Cloud** — used when `COGNEE_API_KEY` is set. All Cognee SDK calls are routed to
-  your hosted instance (`COGNEE_BASE_URL`). Sign up at cognee.ai with code `COGNEE-35`.
-
-### Local Gemini settings (in `.env`)
+## How it works
 
 ```
-GEMINI_API_KEY=...                              # required for local mode
-LLM_PROVIDER=gemini
-LLM_MODEL=gemini/gemini-3.1-flash-lite
-EMBEDDING_PROVIDER=gemini
-EMBEDDING_MODEL=gemini/gemini-embedding-2
-EMBEDDING_DIMENSIONS=3072
-COGNEE_SKIP_CONNECTION_TEST=true                # bypasses the 30s LLM preflight check
+[Maintainer's server]
+  FastAPI backend  ←  GitHub webhooks (push, PR, issues, review comments)
+    ├── GitHub Token + Cognee + LLM keys (stays on server)
+    └── REST API  (:8000)
+
+          ↕  HTTP
+
+[Each user's machine]
+  MCP server  ←  Claude Code / Cursor / OpenCode
+    └── Only needs: DEVBRAIN_API_URL
 ```
 
-## Setup
+A maintainer hosts one backend. Every user on the team points the lightweight MCP
+client at that URL — no GitHub token, no Cognee config, no LLM keys required on
+the user's side.
+
+---
+
+## For maintainers — hosting the backend
+
+### 1. Clone and install
 
 ```bash
+git clone https://github.com/your-org/devbrain
+cd devbrain
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env        # then set GEMINI_API_KEY + GITHUB_TOKEN (local mode)
 ```
 
-## MCP Server (for AI agents)
-
-Run on stdio (default):
+### 2. Configure environment
 
 ```bash
-python -m backend.mcp_server
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```bash
+# LLM backend — pick one
+
+# Option A: Cognee Cloud (recommended for teams)
+COGNEE_API_KEY=...          # from cognee.ai — use code COGNEE-35 for a free dev plan
+COGNEE_BASE_URL=...         # your hosted Cognee instance URL
+
+# Option B: Local Gemini (no extra infra, good for solo/small teams)
+GEMINI_API_KEY=...          # from https://aistudio.google.com/apikey
+LLM_MODEL=gemini/gemini-2.0-flash-exp
+EMBEDDING_MODEL=gemini/text-embedding-004
+EMBEDDING_DIMENSIONS=768
+COGNEE_SKIP_CONNECTION_TEST=true
+
+# GitHub
+GITHUB_TOKEN=ghp_...        # needs repo read scope
+GITHUB_WEBHOOK_SECRET=...   # any random string; paste the same into GitHub's webhook form
+
+# Optional: default repo for /query without ?repo=
+GITHUB_REPO=owner/repo-name
+```
+
+### 3. Start the backend
+
+```bash
+uvicorn backend.main:app --host 0.0.0.0 --port 8000
+```
+
+Or with Docker:
+
+```bash
+docker-compose up devbrain-api
+```
+
+### 4. Ingest a repo
+
+```bash
+curl -X POST http://localhost:8000/ingest \
+  -H 'Content-Type: application/json' \
+  -d '{"repo": "owner/your-repo", "sync_history_days": 90}'
+```
+
+This pulls 90 days of commits, PRs, issues, ADRs, and code structure into the
+knowledge graph. The response includes per-source counts:
+
+```json
+{
+  "repo": "owner/your-repo",
+  "ingested": { "commits": 312, "prs": 47, "issues": 83, "adrs": 6, "ast_modules": 24 }
+}
+```
+
+### 5. Set up GitHub webhooks
+
+In your repo: **Settings → Webhooks → Add webhook**
+
+| Field | Value |
+|-------|-------|
+| Payload URL | `https://your-domain.com/webhook/github` |
+| Content type | `application/json` |
+| Secret | Same value as `GITHUB_WEBHOOK_SECRET` in `.env` |
+| Events | Select **individual events** and tick: |
+| | `Pushes` |
+| | `Pull requests` |
+| | `Issues` |
+| | `Issue comments` |
+| | `Pull request review comments` |
+
+For local development, expose the backend with:
+
+```bash
+ngrok http 8000
+# or
+cloudflared tunnel --url http://localhost:8000
+```
+
+After saving the webhook, GitHub will send a ping event — you should see HTTP 200
+in the webhook delivery log.
+
+**What gets captured automatically after this:**
+
+| GitHub event | When DevBrain ingests |
+|---|---|
+| Push | Every commit that touches files |
+| Pull request | Opened, edited, updated, and merged |
+| Issues | Opened, labeled, and closed |
+| Issue comment | Any new comment on an issue or PR conversation thread |
+| PR review comment | Any new inline code review comment |
+
+---
+
+## For users — connecting to the hosted backend
+
+You only need the URL of the hosted backend. Ask your maintainer for it.
+
+### Claude Code
+
+```bash
+DEVBRAIN_API_URL=https://devbrain.your-company.com \
+  claude mcp add devbrain -- python -m backend.mcp_server
+```
+
+Or add it permanently to your Claude Code config:
+
+```bash
+claude mcp add devbrain \
+  --env DEVBRAIN_API_URL=https://devbrain.your-company.com \
+  -- python -m backend.mcp_server
 ```
 
 ### OpenCode
 
-Add DevBrain to your `opencode.jsonc` — copy the example and fill in your tokens:
+```bash
+opencode mcp add devbrain -- python -m backend.mcp_server
+opencode mcp env devbrain DEVBRAIN_API_URL https://devbrain.your-company.com
+```
+
+Or copy and edit the example config:
 
 ```bash
 cp opencode.example.jsonc opencode.jsonc
-# edit opencode.jsonc with your paths, GITHUB_TOKEN, and GEMINI_API_KEY
+# set DEVBRAIN_API_URL in opencode.jsonc
 ```
 
-Or register directly with the CLI:
+### Verify the connection
 
-```bash
-opencode mcp add devbrain -- python -m backend.mcp_server
-opencode mcp env devbrain GITHUB_TOKEN ghp_xxx
-opencode mcp env devbrain GEMINI_API_KEY your_gemini_key
-opencode mcp env devbrain COGNEE_SKIP_CONNECTION_TEST true
+After registering, ask your agent:
+
+```
+list_repos()
 ```
 
-List connected servers and auth status:
+You should see the repos the maintainer has already ingested.
 
-```bash
-opencode mcp list
-```
+---
 
-The server is fully multi-repo — every tool takes an explicit `repo` param.
+## MCP tools
 
-### Claude Code
-
-Register the MCP server with your GitHub and Gemini credentials:
-
-```bash
-claude mcp add devbrain \
-  --env GITHUB_TOKEN=ghp_xxx \
-  --env GEMINI_API_KEY=your_gemini_key \
-  --env COGNEE_SKIP_CONNECTION_TEST=true \
-  -- python -m backend.mcp_server
-```
-
-### MCP Tools
-
-| Tool | Description |
+| Tool | What it does |
 |------|-------------|
-| `ingest_repo(repo, sync_history_days?)` | Full sync of a repo (commits, PRs, ADRs, AST) |
+| `ingest_repo(repo, sync_history_days?)` | Full sync: commits, PRs, issues, ADRs, code structure |
 | `query_devbrain(question, repo?, mode?)` | NL query over the knowledge graph |
 | `forget_module(repo, module)` | Prune a deprecated module's subgraph |
 | `list_repos()` | List all ingested repos |
-| `refresh_memory(repo?)` | Run memify enrichment for one or all repos |
+| `refresh_memory(repo?)` | Run memify enrichment (expensive — use deliberately) |
 
-## REST API (for humans and webhooks)
+**Query modes:**
+
+| Mode | Best for |
+|------|----------|
+| `hybrid` (default) | Most questions — auto-routes between semantic and graph |
+| `why` | "Why was X changed?" — deep multi-hop graph traversal |
+| `chunks` | Raw text retrieval when you want the exact source text |
+
+**Example queries:**
+
+```
+"Why was the authentication module decoupled from the user service?"
+"Who approved the migration to microservices?"
+"What issues were labeled 'security' in Q1?"
+"Which modules depend on PaymentGateway?"
+"What was the fix for the last session timeout bug?"
+```
+
+---
+
+## REST API reference
 
 ```bash
 uvicorn backend.main:app --reload --port 8000
@@ -106,34 +221,37 @@ uvicorn backend.main:app --reload --port 8000
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/ingest` | Full historical sync of a repo (`{"repo": "...", "sync_history_days": 90}`) |
-| `POST` | `/webhook/github` | GitHub webhook receiver (push + pull_request), HMAC-verified |
-| `GET`  | `/query?q=...&repo=...&mode=...` | Natural language recall (`mode`: `hybrid` \| `why` \| `chunks`) |
-| `DELETE` | `/module/{owner}/{repo}/{module}` | Surgical module pruning via Cognee `forget()` |
+| `GET`  | `/health` | Status check |
+| `GET`  | `/repos` | List all ingested repos |
+| `POST` | `/ingest` | Full historical sync (`{"repo": "owner/repo", "sync_history_days": 90}`) |
+| `GET`  | `/query?q=...&repo=...&mode=...` | Natural language recall |
+| `POST` | `/refresh?repo=...` | Run memify for one repo (omit `repo` for all) |
+| `DELETE` | `/module/{owner}/{repo}/{module}` | Surgical module pruning |
+| `POST` | `/webhook/github` | GitHub webhook receiver (HMAC-verified) |
 
-### Examples
+### curl examples
 
 ```bash
-# Ingest
-curl -X POST localhost:8000/ingest \
-  -H 'Content-Type: application/json' \
-  -d '{"repo":"owner/your-repo","sync_history_days":90}'
-
 # Query
 curl "localhost:8000/query?q=why+was+auth+refactored&repo=owner/your-repo&mode=why"
 
-# Prune a module
+# Trigger memify refresh
+curl -X POST "localhost:8000/refresh?repo=owner/your-repo"
+
+# Prune a deprecated module
 curl -X DELETE localhost:8000/module/owner/your-repo/legacy_payment_v1
 ```
 
-## How DevBrain uses Cognee
+---
 
-| DevBrain concept | Real Cognee SDK call |
+## Cognee integration
+
+| DevBrain concept | Cognee SDK call |
 |---|---|
-| Permanent ingestion | `cognee.remember(payload, dataset_name=...)` (runs add → cognify → improve) |
-| Hybrid query | `cognee.recall(q)` / `cognee.search(query_type=SearchType.GRAPH_COMPLETION)` |
-| Self-improving memory | `cognee.memify(dataset=...)` (weekly cron) |
+| Ingest anything | `cognee.remember(payload, dataset_name=...)` |
+| Query | `cognee.recall(q)` / `cognee.search(SearchType.GRAPH_COMPLETION)` |
+| Self-improving memory | `cognee.memify(dataset=...)` — runs weekly automatically |
 | Surgical pruning | `cognee.forget(dataset=...)` |
 
-Datasets follow the pattern `repo_{owner}_{repo}_{type}` where type is one of
-`commits`, `prs`, `adrs`, `ast`.
+Datasets follow the pattern `repo_{owner}_{repo}_{type}` where `type` is one of
+`commits`, `prs`, `issues`, `adrs`, `ast`.

@@ -41,6 +41,9 @@ class Settings:
     # --- DevBrain ---
     # JSON file tracking which repos have been ingested (multi-repo support).
     REGISTRY_PATH: str = os.getenv("REGISTRY_PATH", "./.devbrain/repos.json")
+    # Remote backend URL for the MCP client mode. When set, the MCP server proxies
+    # all calls to this URL instead of importing the service layer directly.
+    DEVBRAIN_API_URL: str = os.getenv("DEVBRAIN_API_URL", "")
 
     @property
     def COGNEE_MODE(self) -> str:
@@ -111,7 +114,7 @@ def dataset_name(owner: str, repo: str, kind: str) -> str:
     This is the single source of truth for dataset naming — never hand-build
     dataset strings elsewhere, or cross-source graph traversal breaks.
     """
-    valid = {"commits", "prs", "adrs", "ast"}
+    valid = {"commits", "prs", "adrs", "ast", "issues"}
     if kind not in valid:
         raise ValueError(f"unknown dataset kind {kind!r}; expected one of {sorted(valid)}")
     return f"repo_{_safe(owner)}_{_safe(repo)}_{kind}"

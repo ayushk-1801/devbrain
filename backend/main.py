@@ -88,6 +88,15 @@ async def query(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+@app.post("/refresh")
+async def refresh(repo: str | None = Query(None)) -> dict:
+    """Run Cognee memify enrichment for one repo, or all ingested repos if omitted."""
+    try:
+        return await service.refresh(repo)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @app.delete("/module/{owner}/{repo}/{module}")
 async def prune_module(owner: str, repo: str, module: str) -> dict:
     """Surgically prune a deprecated module's subgraph."""
@@ -125,19 +134,52 @@ async def _handle_push(repo: str, payload: dict) -> None:
 
 
 async def _handle_pull_request(repo: str, payload: dict) -> None:
-    """Ingest a merged pull request."""
+    """Ingest a PR on open/edit/sync (captures discussion before merge) and on merge."""
+    action = payload.get("action")
     pr = payload.get("pull_request", {})
-    if payload.get("action") != "closed" or not pr.get("merged"):
+    if action not in ("opened", "edited", "synchronize", "closed"):
         return
+    if action == "closed" and not pr.get("merged"):
+        return  # closed without merging — skip
     try:
         await service.ingest_single_pr(repo, pr["number"])
     except Exception:
         logger.exception("failed to ingest PR #%s", pr.get("number"))
 
 
+async def _handle_issue(repo: str, payload: dict) -> None:
+    """Ingest an issue when opened, labeled, or closed."""
+    if payload.get("action") not in ("opened", "labeled", "closed"):
+        return
+    issue = payload.get("issue", {})
+    try:
+        await service.ingest_single_issue(repo, issue["number"])
+    except Exception:
+        logger.exception("failed to ingest issue #%s", issue.get("number"))
+
+
+async def _handle_pr_review_comment(repo: str, payload: dict) -> None:
+    """Ingest a newly created PR inline review comment."""
+    if payload.get("action") != "created":
+        return
+    comment = payload.get("comment", {})
+    try:
+        await service.ingest_pr_review_comment(repo, comment["id"])
+    except Exception:
+        logger.exception("failed to ingest PR review comment #%s", comment.get("id"))
+
+
+_WEBHOOK_DISPATCH = {
+    "push": _handle_push,
+    "pull_request": _handle_pull_request,
+    "issues": _handle_issue,
+    "pull_request_review_comment": _handle_pr_review_comment,
+}
+
+
 @app.post("/webhook/github")
 async def github_webhook(request: Request) -> dict:
-    """GitHub webhook receiver for push and pull_request events.
+    """GitHub webhook receiver for push, pull_request, issues, and review comment events.
 
     Verifies the signature, then dispatches ingestion as a background task so the
     webhook returns immediately (never block the response).
@@ -152,14 +194,10 @@ async def github_webhook(request: Request) -> dict:
     full_name = payload.get("repository", {}).get("full_name", "")
     if "/" not in full_name:
         raise HTTPException(status_code=400, detail="missing repository.full_name")
-    # Validate shape early; the repo string itself is what the service needs.
     split_repo(full_name)
 
-    if event == "push":
-        asyncio.create_task(_handle_push(full_name, payload))
-    elif event == "pull_request":
-        asyncio.create_task(_handle_pull_request(full_name, payload))
-    else:
-        return {"status": "ignored", "event": event}
-
-    return {"status": "accepted", "event": event}
+    handler = _WEBHOOK_DISPATCH.get(event)
+    if handler:
+        asyncio.create_task(handler(full_name, payload))
+        return {"status": "accepted", "event": event}
+    return {"status": "ignored", "event": event}

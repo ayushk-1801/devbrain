@@ -32,6 +32,25 @@ async def ingest_pr(owner: str, repo: str, pr: dict[str, Any]) -> None:
     await memory.remember(payload, dataset_name(owner, repo, "prs"))
 
 
+def _review_comment_payload(owner: str, repo: str, comment: dict) -> str:
+    hunk_lines = (comment.get("diff_hunk") or "").splitlines()
+    hunk = "\n".join(hunk_lines[:20]) + ("\n..." if len(hunk_lines) > 20 else "")
+    return (
+        f"# PR Review Comment on PR #{comment['pr_number']} in {owner}/{repo}\n\n"
+        f"Author: {comment['author']}\n"
+        f"File: {comment['path']}\n"
+        f"Date: {comment['created_at']}\n\n"
+        f"## Diff context\n```\n{hunk}\n```\n\n"
+        f"## Comment\n{comment['body'] or '(empty)'}\n"
+    )
+
+
+async def ingest_pr_review_comment(owner: str, repo: str, comment: dict) -> None:
+    """Remember a standalone PR review comment into the repo's prs dataset."""
+    payload = _review_comment_payload(owner, repo, comment)
+    await memory.remember(payload, dataset_name(owner, repo, "prs"))
+
+
 async def ingest_prs(owner: str, repo: str, since_days: int | None = None) -> int:
     """Fetch and ingest merged PRs (optionally within a window). Returns count."""
     prs = github_client.fetch_pull_requests(owner, repo, since_days=since_days)
