@@ -1,0 +1,89 @@
+services:
+
+  # -----------------------------------------------------------------------
+  # Redis — job queue broker (shared by API and worker)
+  # -----------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # -----------------------------------------------------------------------
+  # Backend — FastAPI REST API + webhook receiver
+  # Enqueues jobs to Redis; never runs ingestion inline.
+  # -----------------------------------------------------------------------
+  devbrain-api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      COGNEE_DATA_DIR: /data/cognee
+      COGNEE_SYSTEM_DIR: /data/cognee-system
+      REGISTRY_PATH: /data/devbrain/repos.json
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - cognee-data:/data/cognee
+      - cognee-system:/data/cognee-system
+      - devbrain-registry:/data/devbrain
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # -----------------------------------------------------------------------
+  # ARQ worker — runs ingestion tasks off the API process
+  # Scale horizontally: docker compose up --scale devbrain-worker=3
+  # -----------------------------------------------------------------------
+  devbrain-worker:
+    build: .
+    command: ["python", "-m", "arq", "backend.worker.WorkerSettings"]
+    env_file: .env
+    environment:
+      COGNEE_DATA_DIR: /data/cognee
+      COGNEE_SYSTEM_DIR: /data/cognee-system
+      REGISTRY_PATH: /data/devbrain/repos.json
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - cognee-data:/data/cognee
+      - cognee-system:/data/cognee-system
+      - devbrain-registry:/data/devbrain
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # -----------------------------------------------------------------------
+  # MCP server — thin httpx client for AI agents (Claude Code, OpenCode)
+  # Users run this locally; included here for testing only.
+  # -----------------------------------------------------------------------
+  devbrain-mcp:
+    build: .
+    command: ["python", "-m", "backend.mcp_server"]
+    environment:
+      DEVBRAIN_API_URL: http://devbrain-api:8000
+    depends_on:
+      devbrain-api:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
+    profiles:
+      - mcp
+
+volumes:
+  redis-data:
+  cognee-data:
+  cognee-system:
+  devbrain-registry:

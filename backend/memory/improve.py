@@ -18,7 +18,7 @@ from backend.memory import client as memory
 logger = logging.getLogger("devbrain.improve")
 
 # Dataset kinds enriched on each refresh.
-_KINDS = ("commits", "prs", "adrs", "ast")
+_KINDS = ("commits", "prs", "adrs", "ast", "issues")
 
 
 async def refresh_repo(repo: str) -> None:

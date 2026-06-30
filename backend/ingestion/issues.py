@@ -10,15 +10,18 @@ from backend.memory import client as memory
 
 
 def _issue_payload(owner: str, repo: str, issue: dict[str, Any]) -> str:
-    """Format an issue with its comment discussions into a memory payload."""
+    labels = ", ".join(issue.get("labels", [])) or "(none)"
+    closed = issue.get("closed_at") or "-"
     comments = "\n".join(
         f"  - {c['author']}: {c['body']}" for c in issue.get("comments", [])
     )
     return (
         f"# Issue #{issue['number']} in {owner}/{repo}: {issue['title']}\n\n"
         f"Author: {issue['author']}\n"
-        f"Closed: {issue['closed_at']}\n"
-        f"State: {issue['state']}\n\n"
+        f"State: {issue['state']}\n"
+        f"Labels: {labels}\n"
+        f"Created: {issue['created_at']}\n"
+        f"Closed: {closed}\n\n"
         f"## Description\n{issue['body'] or '(no description)'}\n\n"
         f"## Comments\n{comments or '  (none)'}\n"
     )
@@ -31,7 +34,7 @@ async def ingest_issue(owner: str, repo: str, issue: dict[str, Any]) -> None:
 
 
 async def ingest_issues(owner: str, repo: str, since_days: int | None = None) -> int:
-    """Fetch and ingest closed issues (optionally within a window). Returns count."""
+    """Fetch and ingest all issues (optionally within a window). Returns count."""
     issues = github_client.fetch_issues(owner, repo, since_days=since_days)
     for issue in issues:
         await ingest_issue(owner, repo, issue)

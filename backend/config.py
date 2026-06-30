@@ -6,12 +6,16 @@ exposes a cached PyGithub client, and provides the canonical dataset-name helper
 
 from __future__ import annotations
 
+import itertools
+import logging
 import os
 from functools import lru_cache
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger("devbrain.config")
 
 
 class Settings:
@@ -23,6 +27,9 @@ class Settings:
 
     # --- Cognee local mode: Gemini LLM + embeddings, file-based stores ---
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    # Additional Gemini keys used as fallbacks when the primary hits rate limits.
+    GEMINI_API_KEY_2: str = os.getenv("GEMINI_API_KEY_2", "")
+    GEMINI_API_KEY_3: str = os.getenv("GEMINI_API_KEY_3", "")
     LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "gemini")
     LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini/gemini-2.0-flash-exp")
     EMBEDDING_PROVIDER: str = os.getenv("EMBEDDING_PROVIDER", "gemini")
@@ -41,6 +48,11 @@ class Settings:
     # --- DevBrain ---
     # JSON file tracking which repos have been ingested (multi-repo support).
     REGISTRY_PATH: str = os.getenv("REGISTRY_PATH", "./.devbrain/repos.json")
+    # Remote backend URL for the MCP client mode. When set, the MCP server proxies
+    # all calls to this URL instead of importing the service layer directly.
+    DEVBRAIN_API_URL: str = os.getenv("DEVBRAIN_API_URL", "")
+    # Redis URL for the ARQ job queue.
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
 
     @property
     def COGNEE_MODE(self) -> str:
@@ -83,6 +95,47 @@ def _export_local_env() -> None:
         for name in ("GEMINI_API_KEY", "LLM_API_KEY", "EMBEDDING_API_KEY"):
             os.environ.setdefault(name, key)
 
+    _register_key_rotation()
+
+
+def _register_key_rotation() -> None:
+    """Register a LiteLLM failure callback that rotates Gemini API keys on 429.
+
+    Builds a round-robin pool from all configured GEMINI_API_KEY* vars and
+    swaps the active key whenever a rate-limit error is detected, so successive
+    retries hit a fresh quota bucket.
+    """
+    pool = [
+        k for k in (
+            settings.GEMINI_API_KEY,
+            settings.GEMINI_API_KEY_2,
+            settings.GEMINI_API_KEY_3,
+        )
+        if k
+    ]
+    if len(pool) < 2:
+        return  # nothing to rotate
+
+    cycle = itertools.cycle(pool)
+    next(cycle)  # advance past the initial key (already set in env)
+
+    def _on_failure(kwargs, exception, start_time, end_time):  # noqa: ANN001
+        status = getattr(exception, "status_code", None)
+        if status != 429:
+            return
+        new_key = next(cycle)
+        os.environ["GEMINI_API_KEY"] = new_key
+        os.environ["LLM_API_KEY"] = new_key
+        os.environ["EMBEDDING_API_KEY"] = new_key
+        logger.warning("Gemini 429 — rotated to next API key")
+
+    try:
+        import litellm
+        if _on_failure not in litellm.failure_callback:
+            litellm.failure_callback.append(_on_failure)
+    except Exception:
+        pass  # litellm not yet importable at config load time in some envs
+
 
 _export_local_env()
 
@@ -111,7 +164,7 @@ def dataset_name(owner: str, repo: str, kind: str) -> str:
     This is the single source of truth for dataset naming — never hand-build
     dataset strings elsewhere, or cross-source graph traversal breaks.
     """
-    valid = {"commits", "prs", "adrs", "ast"}
+    valid = {"commits", "prs", "adrs", "ast", "issues"}
     if kind not in valid:
         raise ValueError(f"unknown dataset kind {kind!r}; expected one of {sorted(valid)}")
     return f"repo_{_safe(owner)}_{_safe(repo)}_{kind}"

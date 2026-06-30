@@ -7,3 +7,5 @@ apscheduler
 python-dotenv
 httpx
 pydantic
+arq
+redis

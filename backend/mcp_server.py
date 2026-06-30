@@ -1,52 +1,65 @@
-"""DevBrain MCP server.
+"""DevBrain MCP server — thin HTTP client over the hosted DevBrain backend.
 
-Exposes DevBrain's living engineering memory to MCP-capable agents (Claude Code,
-Cursor, etc.) over stdio. The agent supplies the target ``repo`` ("owner/repo")
-as a parameter on each tool call, so a single server works across any number of
-repositories the configured GITHUB_TOKEN can read.
+This process runs locally (stdio transport) for each user and proxies every tool
+call to the DevBrain REST API at DEVBRAIN_API_URL. Users need only that URL — no
+GitHub token, no Cognee config, no LLM keys.
 
-GitHub access uses the server's env token (GITHUB_TOKEN); Cognee uses the same
-local-Gemini / Cloud configuration as the REST app (see backend.memory.client).
+The maintainer runs one backend (main.py) with all secrets; users point this
+server at it:
 
-Run:
-    python -m backend.mcp_server          # stdio transport
-or register with Claude Code:
-    claude mcp add devbrain -- python -m backend.mcp_server
+    DEVBRAIN_API_URL=https://devbrain.example.com \\
+      claude mcp add devbrain -- python -m backend.mcp_server
+
+Run locally (backend on the same machine):
+    DEVBRAIN_API_URL=http://localhost:8000 python -m backend.mcp_server
 """
 
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import httpx
 from mcp.server.fastmcp import FastMCP
-
-from backend import service
-from backend.config import settings
-from backend.ingestion import issues
-from backend.memory import client as memory
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("devbrain.mcp")
 
+DEVBRAIN_API_URL = os.getenv("DEVBRAIN_API_URL", "http://localhost:8000").rstrip("/")
+
+_http: httpx.AsyncClient | None = None
+
+
+def _client() -> httpx.AsyncClient:
+    if _http is None:
+        raise RuntimeError("MCP server not initialised")
+    return _http
+
+
+def _raise_for_status(response: httpx.Response) -> None:
+    if response.is_error:
+        raise RuntimeError(
+            f"DevBrain API error {response.status_code}: {response.text[:200]}"
+        )
+
 
 @asynccontextmanager
 async def lifespan(server: FastMCP) -> AsyncIterator[None]:
-    """Connect Cognee once when the MCP server starts; disconnect on shutdown."""
-    await memory.connect()
-    logger.info("DevBrain MCP server started in %s mode", settings.COGNEE_MODE)
-    try:
+    global _http
+    async with httpx.AsyncClient(base_url=DEVBRAIN_API_URL, timeout=120) as client:
+        _http = client
+        logger.info("DevBrain MCP client connected to %s", DEVBRAIN_API_URL)
         yield
-    finally:
-        await memory.disconnect()
+    _http = None
 
 
 mcp = FastMCP(
     "DevBrain",
     instructions=(
         "DevBrain is a living engineering memory. It ingests a GitHub repo's "
-        "commits, pull requests, ADRs, and code structure into a knowledge graph, "
+        "commits, pull requests, issues, ADRs, and code structure into a knowledge graph, "
         "then answers 'why was this changed?' questions with sourced provenance. "
         "Call `ingest_repo` first for a repo, then `query_devbrain`. All tools take "
         "an explicit `repo` of the form 'owner/repo'."
@@ -57,20 +70,43 @@ mcp = FastMCP(
 
 @mcp.tool()
 async def ingest_repo(repo: str, sync_history_days: int | None = None) -> dict:
-    """Ingest a GitHub repo's history into DevBrain's memory.
+    """Enqueue ingestion of a GitHub repo's history into DevBrain's memory.
 
-    Fetches commits, merged pull requests, ADRs, and code structure and builds
-    the knowledge graph. Run this once per repo before querying. Use
-    `sync_history_days` to limit how far back commits/PRs are pulled.
+    Returns immediately with a job_id. The actual ingestion (commits, PRs,
+    issues, ADRs, code structure) runs asynchronously in the background.
+    Use `job_status(job_id)` to check progress.
 
     Args:
         repo: Target repository as "owner/repo".
-        sync_history_days: Optional window (days) for commits/PRs. None = all.
+        sync_history_days: Optional window (days). None = all history.
 
     Returns:
-        Per-source ingestion counts.
+        {"job_id": "...", "status": "queued", "repo": "..."}
     """
-    return await service.full_sync(repo, sync_history_days)
+    client = _client()
+    body: dict = {"repo": repo}
+    if sync_history_days is not None:
+        body["sync_history_days"] = sync_history_days
+    response = await client.post("/ingest", json=body)
+    _raise_for_status(response)
+    return response.json()
+
+
+@mcp.tool()
+async def job_status(job_id: str) -> dict:
+    """Check the status of an enqueued ingestion job.
+
+    Args:
+        job_id: The job_id returned by ingest_repo.
+
+    Returns:
+        {"job_id": "...", "status": "queued|in_progress|complete|not_found",
+         "result": {...}}  # result present when status is complete
+    """
+    client = _client()
+    response = await client.get(f"/jobs/{job_id}")
+    _raise_for_status(response)
+    return response.json()
 
 
 @mcp.tool()
@@ -86,15 +122,16 @@ async def query_devbrain(question: str, repo: str | None = None, mode: str = "hy
     Returns:
         A dict with the synthesized `answer` and supporting `results`.
     """
-    result = await service.query(question, repo=repo, mode=mode)
-    # Stringify Cognee results so the payload is always JSON-serialisable.
-    return {
-        "question": result["question"],
-        "repo": result["repo"],
-        "mode": result["mode"],
-        "answer": str(result["answer"]) if result["answer"] is not None else None,
-        "results": [str(r) for r in (result.get("results") or [])],
-    }
+    client = _client()
+    params: dict = {"q": question, "mode": mode}
+    if repo:
+        params["repo"] = repo
+    response = await client.get("/query", params=params)
+    _raise_for_status(response)
+    data = response.json()
+    # Ensure results are always strings so the payload is JSON-serialisable.
+    data["results"] = [str(r) for r in (data.get("results") or [])]
+    return data
 
 
 @mcp.tool()
@@ -108,18 +145,25 @@ async def forget_module(repo: str, module: str) -> dict:
     Returns:
         Status of the prune operation.
     """
-    return await service.forget_module(repo, module)
+    owner, name = repo.split("/", 1)
+    client = _client()
+    response = await client.delete(f"/module/{owner}/{name}/{module}")
+    _raise_for_status(response)
+    return response.json()
 
 
 @mcp.tool()
 async def list_repos() -> dict:
     """List all repositories that have been ingested into DevBrain."""
-    return {"repos": service.list_repos()}
+    client = _client()
+    response = await client.get("/repos")
+    _raise_for_status(response)
+    return response.json()
 
 
 @mcp.tool()
 async def refresh_memory(repo: str | None = None) -> dict:
-    """Run Cognee's (expensive) memify enrichment for one repo, or all if omitted.
+    """Run Cognee's memify enrichment for one repo, or all if omitted.
 
     Strengthens frequently-traversed paths and derives new facts. This is a
     heavy operation — invoke deliberately, not on every change.
@@ -127,26 +171,13 @@ async def refresh_memory(repo: str | None = None) -> dict:
     Args:
         repo: Optional "owner/repo". Omit to refresh every ingested repo.
     """
-    return await service.refresh(repo)
-
-
-@mcp.tool()
-async def ingest_issues(owner: str, repo: str, sync_history_days: int | None = None) -> dict:
-    """Ingest a GitHub repo's closed issues and their comment discussions into DevBrain's memory.
-
-    Fetches closed issues and builds the knowledge graph with their discussion context.
-    Run this once per repo before querying issue-related questions. Use
-    `sync_history_days` to limit how far back issues are pulled.
-
-    Args:
-        owner: Repository owner as "owner".
-        repo: Repository name as "repo_name".
-        sync_history_days: Optional window (days) for issues. None = all closed issues.
-
-    Returns:
-        Per-source ingestion counts including issues.
-    """
-    return await service.full_sync(f"{owner}/{repo}", sync_history_days)
+    client = _client()
+    params: dict = {}
+    if repo:
+        params["repo"] = repo
+    response = await client.post("/refresh", params=params)
+    _raise_for_status(response)
+    return response.json()
 
 
 def main() -> None:

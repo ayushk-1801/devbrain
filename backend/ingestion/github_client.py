@@ -114,6 +114,65 @@ def _pr_to_dict(pr) -> dict[str, Any]:
     }
 
 
+def fetch_issues(
+    owner: str, repo: str, since_days: Optional[int] = None
+) -> list[dict[str, Any]]:
+    """Return issues (not PRs) as plain dicts, optionally limited to the last N days."""
+    gh_repo = _get_repo(owner, repo)
+    kwargs: dict[str, Any] = {"state": "all", "sort": "updated", "direction": "desc"}
+    if since_days:
+        kwargs["since"] = datetime.now(timezone.utc) - timedelta(days=since_days)
+
+    out: list[dict[str, Any]] = []
+    for issue in gh_repo.get_issues(**kwargs):
+        # Issues API returns PRs too — skip them; PRs are covered by the prs dataset.
+        if issue.pull_request is not None:
+            continue
+        out.append(_issue_to_dict(issue))
+    return out
+
+
+def fetch_issue(owner: str, repo: str, number: int) -> dict[str, Any]:
+    """Return a single issue (used by the issues webhook)."""
+    gh_repo = _get_repo(owner, repo)
+    return _issue_to_dict(gh_repo.get_issue(number))
+
+
+def _issue_to_dict(issue) -> dict[str, Any]:
+    comments = [
+        {"author": c.user.login if c.user else "unknown", "body": c.body}
+        for c in issue.get_comments()
+    ]
+    return {
+        "number": issue.number,
+        "title": issue.title,
+        "body": issue.body or "",
+        "state": issue.state,
+        "author": issue.user.login if issue.user else "unknown",
+        "labels": [label.name for label in issue.labels],
+        "created_at": issue.created_at.isoformat() if issue.created_at else "",
+        "closed_at": issue.closed_at.isoformat() if issue.closed_at else "",
+        "comments": comments,
+    }
+
+
+def fetch_pr_review_comment(owner: str, repo: str, comment_id: int) -> dict[str, Any]:
+    """Return a single PR review comment (used by the pull_request_review_comment webhook)."""
+    gh_repo = _get_repo(owner, repo)
+    comment = gh_repo.get_pull_review_comment(comment_id)
+    # Parse PR number from the pull_request_url field (ends with /pulls/<number>).
+    pr_number = int(comment.pull_request_url.rstrip("/").split("/")[-1])
+    return {
+        "id": comment.id,
+        "pr_number": pr_number,
+        "author": comment.user.login if comment.user else "unknown",
+        "body": comment.body or "",
+        "path": comment.path,
+        "diff_hunk": comment.diff_hunk or "",
+        "created_at": comment.created_at.isoformat() if comment.created_at else "",
+    }
+
+
 def fetch_adrs(owner: str, repo: str) -> list[dict[str, Any]]:
     """Return markdown ADR files found in the conventional ADR directories."""
     gh_repo = _get_repo(owner, repo)
@@ -150,41 +209,4 @@ def fetch_repo_tree(owner: str, repo: str) -> dict[str, Any]:
     return {"default_branch": branch, "files": files}
 
 
-def fetch_issue(owner: str, repo: str, number: int) -> dict[str, Any]:
-    """Return a single issue (used by the issue webhook)."""
-    gh_repo = _get_repo(owner, repo)
-    return _issue_to_dict(gh_repo.get_issue(number))
 
-
-def fetch_issues(owner: str, repo: str, since_days: Optional[int] = None) -> list[dict[str, Any]]:
-    """Return closed issues as plain dicts, optionally limited to the last N days."""
-    from datetime import datetime, timedelta, timezone
-
-    gh_repo = _get_repo(owner, repo)
-    query = "is:closed"
-    if since_days:
-        since = datetime.now(timezone.utc) - timedelta(days=since_days)
-        query += f" created:{since.isoformat()}"
-
-    out: list[dict[str, Any]] = []
-    for issue in gh_repo.get_issues(state="closed", sort="updated", direction="desc", filter="all"):
-        if issue.state != "closed":
-            continue
-        out.append(_issue_to_dict(issue))
-    return out
-
-
-def _issue_to_dict(issue) -> dict[str, Any]:
-    comments = [
-        {"author": c.user.login if c.user else "unknown", "body": c.body}
-        for c in issue.comments or []
-    ]
-    return {
-        "number": issue.number,
-        "title": issue.title,
-        "body": issue.body or "",
-        "author": issue.user.login if issue.user else "unknown",
-        "closed_at": issue.closed_at.isoformat() if issue.closed_at else "",
-        "state": issue.state,
-        "comments": comments,
-    }
