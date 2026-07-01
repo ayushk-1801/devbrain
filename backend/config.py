@@ -106,7 +106,8 @@ def _register_key_rotation() -> None:
     retries hit a fresh quota bucket.
     """
     pool = [
-        k for k in (
+        k
+        for k in (
             settings.GEMINI_API_KEY,
             settings.GEMINI_API_KEY_2,
             settings.GEMINI_API_KEY_3,
@@ -131,6 +132,7 @@ def _register_key_rotation() -> None:
 
     try:
         import litellm
+
         if _on_failure not in litellm.failure_callback:
             litellm.failure_callback.append(_on_failure)
     except Exception:
@@ -164,9 +166,11 @@ def dataset_name(owner: str, repo: str, kind: str) -> str:
     This is the single source of truth for dataset naming — never hand-build
     dataset strings elsewhere, or cross-source graph traversal breaks.
     """
-    valid = {"commits", "prs", "adrs", "ast", "issues"}
+    valid = {"commits", "prs", "adrs", "ast", "issues", "profiles"}
     if kind not in valid:
-        raise ValueError(f"unknown dataset kind {kind!r}; expected one of {sorted(valid)}")
+        raise ValueError(
+            f"unknown dataset kind {kind!r}; expected one of {sorted(valid)}"
+        )
     return f"repo_{_safe(owner)}_{_safe(repo)}_{kind}"
 
 
