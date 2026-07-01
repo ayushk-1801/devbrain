@@ -42,7 +42,7 @@ async def ask_devbrain(question: str, repo: str | None = None, mode: str = "hybr
             if mode == "hybrid":
                 results = await memory.recall(question)
             else:
-                results = await cognee.search(query_text=question, query_type=search_type)
+                results = await cognee.search(question, search_type=search_type)
             break
         except RuntimeError as exc:
             if _LOCK_MSG in str(exc) and attempt < 5:

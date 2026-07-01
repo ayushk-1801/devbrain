@@ -38,6 +38,11 @@ async def connect() -> None:
         return
 
     if settings.COGNEE_MODE == "cloud":
+        if not settings.COGNEE_BASE_URL:
+            raise RuntimeError(
+                "Cloud mode requires COGNEE_BASE_URL (e.g. https://your-instance.cognee.ai). "
+                "Set it in .env alongside COGNEE_API_KEY."
+            )
         await cognee.serve(url=settings.COGNEE_BASE_URL, api_key=settings.COGNEE_API_KEY)
         logger.info("Cognee connected in CLOUD mode (%s)", settings.COGNEE_BASE_URL)
     else:
