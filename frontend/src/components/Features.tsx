@@ -13,7 +13,7 @@ const tabContent: Record<string, {title: string, body: string, illustration: Rea
   commits: [
     { 
       title: "Commit Intelligence", 
-      body: "Every git push is analyzed — message, diff, author, timestamp, and changed files become traversable graph nodes with full provenance.",
+      body: "Every git push is analyzed - message, diff, author, timestamp, and changed files become traversable graph nodes with full provenance.",
       illustration: (
         <svg viewBox="0 0 160 160" className="w-full h-full">
           <circle cx="80" cy="80" r="4" fill="var(--color-text-primary)" />
@@ -55,18 +55,18 @@ const tabContent: Record<string, {title: string, body: string, illustration: Rea
   ],
   prs: [
     { title: "Review Comment Memory", body: "Every review comment, approval, and change-request is stored. The debate that shaped the code is permanently accessible.", illustration: null },
-    { title: "Decision Provenance", body: "PR descriptions and linked issues are parsed and connected to the modules they touched. Ask 'why was this function written this way' — get the PR.", illustration: null },
+    { title: "Decision Provenance", body: "PR descriptions and linked issues are parsed and connected to the modules they touched. Ask 'why was this function written this way' - get the PR.", illustration: null },
     { title: "Merge Lineage", body: "Know exactly which PRs affected any file or module, in chronological order. Full audit trail, zero manual tracking.", illustration: null },
   ],
   adrs: [
     { title: "Auto-Discovery", body: "DevBrain scans /docs/decisions, /adr, /docs/adr, and /.decisions automatically. No config needed.", illustration: null },
-    { title: "Module Linkage", body: "ADRs are linked to the code modules they govern via Cognee's entity extraction. Ask 'what decisions apply to the auth module' — get them all.", illustration: null },
+    { title: "Module Linkage", body: "ADRs are linked to the code modules they govern via Cognee's entity extraction. Ask 'what decisions apply to the auth module' - get them all.", illustration: null },
     { title: "Supersession Tracking", body: "When ADR-12 supersedes ADR-07, the graph records the edge. You always know the current governing decision, not an outdated one.", illustration: null },
   ],
   ast: [
     { title: "Dependency Graph", body: "Functions, classes, and modules form a live call graph. See what depends on what across the entire codebase, in any language.", illustration: null },
     { title: "Impact Analysis", body: "Before changing a function, ask which modules call it. DevBrain traverses the AST graph and lists every affected path.", illustration: null },
-    { title: "Cross-Source Traversal", body: "The AST graph connects to the commit and PR graphs. Find which pull requests modified a function and why — in a single query.", illustration: null },
+    { title: "Cross-Source Traversal", body: "The AST graph connects to the commit and PR graphs. Find which pull requests modified a function and why - in a single query.", illustration: null },
   ]
 };
 
@@ -80,7 +80,7 @@ export function Features() {
         const nextIndex = (currentIndex + 1) % tabs.length;
         return tabs[nextIndex].id;
       });
-    }, 5000);
+    }, 8000);
 
     return () => clearInterval(interval);
   }, [activeTab]);
@@ -122,7 +122,7 @@ export function Features() {
                     className="absolute bottom-0 left-0 h-[2px] bg-text-primary"
                     initial={{ width: "0%" }}
                     animate={{ width: "100%" }}
-                    transition={{ duration: 5, ease: "linear" }}
+                    transition={{ duration: 8, ease: "linear" }}
                   />
                 )}
               </div>
@@ -140,14 +140,14 @@ export function Features() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -16 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8"
+            className="grid grid-cols-1 md:grid-cols-3 gap-8 md:h-[480px]"
           >
             {tabContent[activeTab].map((card, idx) => (
               <div 
                 key={idx}
-                className="bg-bg-card rounded-[24px] p-[40px] md:p-[56px] flex flex-col hover:-translate-y-[4px] hover:shadow-[0_12px_40px_rgba(4,2,0,0.08)] transition-all duration-300"
+                className="bg-bg-card rounded-[24px] p-[40px] md:p-[56px] flex flex-col h-full hover:-translate-y-[4px] hover:shadow-[0_12px_40px_rgba(4,2,0,0.08)] transition-all duration-300"
               >
-                <div className="w-full h-[160px] bg-bg rounded-[16px] mb-8 overflow-hidden flex items-center justify-center">
+                <div className="w-full h-[160px] bg-bg rounded-[16px] mb-8 overflow-hidden flex items-center justify-center shrink-0">
                   {card.illustration || (
                     <div className="opacity-20 flex flex-col gap-2 items-center">
                       <div className="w-12 h-12 rounded-full border-2 border-border flex items-center justify-center">
@@ -156,10 +156,10 @@ export function Features() {
                     </div>
                   )}
                 </div>
-                <h3 className="font-display text-[24px] md:text-[28px] font-bold text-text-primary mb-4 leading-tight tracking-tight">
+                <h3 className="font-display text-[24px] md:text-[28px] font-bold text-text-primary mb-4 leading-tight tracking-tight shrink-0">
                   {card.title}
                 </h3>
-                <p className="font-display text-[16px] text-text-muted leading-[1.6]">
+                <p className="font-display text-[16px] text-text-muted leading-[1.6] grow">
                   {card.body}
                 </p>
               </div>

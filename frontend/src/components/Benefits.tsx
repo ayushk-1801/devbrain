@@ -34,7 +34,7 @@ const benefits = [
   {
     icon: UserPlus,
     title: "New Hires",
-    body: "Understand a year of context on day one. Ask anything about the codebase in plain English and get a sourced, accurate answer — no senior engineer required.",
+    body: "Understand a year of context on day one. Ask anything about the codebase in plain English and get a sourced, accurate answer - no senior engineer required.",
     bg: "var(--color-accent-mint)",
     zIndex: 1
   }
@@ -124,7 +124,7 @@ export function Benefits() {
             DevBrain is for Every Engineer
           </h2>
           <p className="font-display text-[16px] md:text-[18px] text-text-muted max-w-[640px] mt-6 leading-[1.7]">
-            From new hires to AI agents — anyone who touches the codebase benefits from persistent memory.
+            From new hires to AI agents - anyone who touches the codebase benefits from persistent memory.
           </p>
         </motion.div>
 

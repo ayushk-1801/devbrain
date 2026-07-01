@@ -89,7 +89,7 @@ export function Footer() {
         </div>
         <div className="flex items-center gap-[24px]">
           <a href="#" className="font-mono text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">Terms</a>
-          <a href="#" className="font-mono text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">GitHub</a>
+          <a href="https://github.com/ayushk-1801/devbrain" className="font-mono text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">GitHub</a>
           <a href="#" className="font-mono text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">Docs</a>
         </div>
       </div>

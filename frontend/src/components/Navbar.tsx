@@ -65,10 +65,10 @@ export function Navbar() {
 
         {/* Right */}
         <div className="flex items-center gap-5">
-          <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub Repository" className="flex items-center gap-2 text-text-muted hover:text-text-primary transition-colors">
+          <a href="https://github.com/ayushk-1801/devbrain" target="_blank" rel="noopener noreferrer" aria-label="GitHub Repository" className="flex items-center gap-2 text-text-muted hover:text-text-primary transition-colors">
             <Github size={20} />
           </a>
-          <button className="hidden md:block bg-bg-secondary border-[1.5px] border-border text-text-primary font-mono text-[14px] font-medium px-4 py-1.5 rounded-full cursor-pointer hover:bg-[#E8E8DC] transition-colors duration-200">
+          <button className="hidden md:block bg-bg-secondary border-[1.5px] border-border text-text-primary font-mono text-[14px] font-medium px-4 py-1.5 rounded-full cursor-pointer hover:bg-[#000000] hover:text-white hover:border-[#000000] transition-colors duration-200">
             Get Started
           </button>
         </div>
