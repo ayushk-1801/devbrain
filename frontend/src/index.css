@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #FEFEF3;
+  --color-bg-secondary: #F3F3E8;
+  --color-bg-card: #F3F2DE;
+  
+  --color-text-primary: #040200;
+  --color-text-muted: #6B6A5E;
+  --color-text-inactive: #AEADA5;
+  
+  --color-btn-dark: #232120;
+  --color-btn-dark-text: #FEFEF3;
+  --color-border: #222222;
+
+  --color-accent-mint: #D8F0E4;
+  --color-accent-yellow: #F3FE7A;
+  --color-accent-peach: #FFD3BA;
+  --color-accent-orchid: #FFBCFD;
+  --color-accent-blush: #FFDDF8;
+  --color-accent-sage: #D9E7C9;
+  --color-accent-powder: #CFE3EA;
+
+  --font-display: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --font-mono: 'Plus Jakarta Sans', -apple-system, sans-serif;
+}
+
+@layer base {
+  :root {
+    --color-bg: #FEFEF3;
+    --color-bg-secondary: #F3F3E8;
+    --color-bg-card: #F3F2DE;
+    --color-text-primary: #040200;
+    --color-text-muted: #6B6A5E;
+    --color-text-inactive: #AEADA5;
+    --color-btn-dark: #232120;
+    --color-btn-dark-text: #FEFEF3;
+    --color-border: #222222;
+    --accent-mint: #D8F0E4;
+    --accent-yellow: #F3FE7A;
+    --accent-peach: #FFD3BA;
+    --accent-orchid: #FFBCFD;
+    --accent-blush: #FFDDF8;
+    --accent-sage: #D9E7C9;
+    --accent-powder: #CFE3EA;
+    --radius-pill: 999px;
+    --radius-card: 24px;
+    --space-section: 140px;
+    --space-card-gap: 32px;
+    --space-card-padding: 56px;
+    --content-max-width: 1400px;
+  }
+  
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text-primary);
+    font-family: var(--font-display);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Text styles */
+  .font-display { font-family: var(--font-display); }
+  .font-mono { font-family: var(--font-mono); }
+
+  /* Utility classes mapped from requirements */
+  .section-padding { padding-top: var(--space-section); padding-bottom: var(--space-section); }
+  .content-container { max-width: var(--content-max-width); margin: 0 auto; padding: 0 48px; }
+  
+  button:focus-visible, a:focus-visible {
+    outline: 2px solid var(--color-border);
+    outline-offset: 2px;
+  }
+  
+  @media (max-width: 768px) {
+    .section-padding { padding-top: 80px; padding-bottom: 80px; }
+    .content-container { padding: 0 24px; }
+  }
+}
