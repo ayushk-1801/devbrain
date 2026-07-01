@@ -3,243 +3,129 @@ Plan 1 - Issues Ingestion Implementation
 
 Summary:
 ==========
-This plan documents the implementation of GitHub Issues ingestion into DevBrain.
-DevBrain will now track closed issues along with their comment discussions,
-complementing the existing PR (merged) tracking system.
-
-Problem Solved:
-=================
-Currently DevBrain only tracks merged PR decisions via PR descriptions and review comments.
-It does NOT track issues, which are critical for understanding user requirements,
-business context, and technical problems that drive development decisions.
-
-Solution:
-===========
-Add comprehensive Issues ingestion pipeline that:
-1. Fetches closed issues from GitHub API (within time windows)
-2. Stores issue metadata (title, description, author, closed timestamp)
-3. Captures issue discussion comments (full comment threads)
-4. Integrates with existing webhook system for real-time updates
-5. Updates all interfaces (REST API, MCP server) for consistency
+Add GitHub Issues ingestion to DevBrain. Track closed issues with their
+full discussion comments, complementing the existing PR tracking system.
 
 Files Modified/Created:
 ========================
-
-1. backend/ingestion/issues.py
-   - New file containing:
-     * _issue_payload() - formats issue data with comments
-     * ingest_issue() - single issue ingestion function
-     * ingest_issues() - batch ingestion with time filtering
+1. backend/ingestion/issues.py (NEW)
+   - _issue_payload() - formats issue data with comments
+   - ingest_issue() / ingest_issues() - single and batch ingestion
 
 2. backend/ingestion/github_client.py
-   - Updated to add:
-     * fetch_issues() - fetches closed issues from GitHub API
-     * fetch_issue() - fetches single issue by number
+   - Added fetch_issues(), fetch_issue(), _issue_to_dict()
 
-3. backend/ingestion/__init__.py
-   - Updated to export issues module for use in other modules
+3. backend/ingestion/__init__.py - Export issues module
 
 4. backend/main.py
-   - Added:
-     * _handle_issue() - webhook handler for closed issue events
-     * Added "issue" event type to webhook router
-     * Updated imports to include issues module
+   - Added _handle_issue() webhook handler for closed issues
 
 5. backend/service.py
-   - Updated:
-     * full_sync() - includes issues in the comprehensive repo sync
-     * Added ingest_single_issue() - service function for webhook ingestion
+   - Added issues to full_sync() + ingest_single_issue()
 
 6. backend/mcp_server.py
-   - Updated:
-     * Added ingest_issues() - MCP tool for issues ingestion
-     * Added issue-related documentation to tool descriptions
-
-7. AGENTS.md (Doc Updates)
-   - Updated "Data Sources and Graph Schema" section:
-     * Added GitHub Issues to list of supported sources
-     * Documented new issue-related queries in "Key Queries to Test Against"
-     * Updated structure to reflect new issues dataset
+   - Added ingest_issues() MCP tool
 
 Graph Schema Impact:
-=====================
-New nodes and edges added to the knowledge graph:
-- Issue nodes (title, author, closed timestamp, state)
+- Issue nodes (title, author, closed timestamp, state, labels)
 - Comment nodes (author, body)
-- Issue → AUTHORED_BY edge
-- Issue → CLOSED_AT edge
-- Issue → CHANGED → File edges (via linked PRs)
-- Comment → REPLIES_TO → Issue edges
-
-Dataset Naming:
-===============
-New dataset pattern: repo_{owner}_{repo}_issues
-- This follows the established convention: commits, prs, adrs, ast, issues
-
-Real-Time Updates:
-==================
-- GitHub issue closed webhooks → immediate ingestion
-- Standard 7-day weekly memory refresh (memify) strengthens graph
-- Incremental updates only for closed issues (not open/in-progress)
-
-Query Examples:
-===============
-New search capabilities enabled:
-
-"What issues were resolved in Q1 2026?"
-
-"Which technical problems drove the authentication refactor?"
-
-"Show the discussion around the database migration issue"
-
-"Which issues are referenced in the payment gateway PR?"
-
-Testing Strategy:
-=================
-1. Verify issue ingestion via REST API endpoint
-2. Test MCP tools for issue ingestion
-3. Validate real-time webhook processing
-4. Confirm graph relationships are properly established
-5. Test hybrid queries combining issues with PRs/ADRs
-
+- Issue -> AUTHORED_BY -> Developer
+- Comment -> REPLIES_TO -> Issue
 
 
 Plan 2 - PR Discussion Comments Addition
 
 Summary:
 ==========
-This plan documents the addition of general PR discussion comments (issue comments on PRs)
-to complement the existing PR review comments capture. This addresses the gap where
-PRs only captured line-by-line code review comments but missed the general conversation
-that happens in the PR discussion section.
-
-Problem Solved:
-=================
-Previously DevBrain captured:
-- PR review comments (line-by-line code feedback via GitHub's review feature) ✅
-- PR description and metadata ✅
-
-But MISSING:
-- General PR discussion comments (questions, clarifications, architectural debates, scope decisions)
-
-These discussions often contain critical "why" context about decisions made in the PR.
-
-Solution:
-===========
-Add PR discussion comments capture to discussion comments capture to the existing PR ingestion pipeline:
-1. Fetch PR issue comments via GitHub API (pr.get_issue_comments())
-2. Store alongside existing review comments in the PR dataset
-3. No new webhook events needed (already captured when PR is merged)
+Add general PR discussion comments (issue comments on PRs) alongside
+existing review comments. PRs now capture both line-by-line code review
+feedback AND general conversation.
 
 Files Modified:
 ================
-
 1. backend/ingestion/github_client.py
-   - Updated _pr_to_dict() to add discussion_comments field:
-     * Captures all comments from pr.get_issue_comments()
-     * Returns list of {author, body} dicts
-     * Consistent with existing review_comments structure
+   - Added discussion_comments field via pr.get_issue_comments()
+   - Added _extract_reviews() for full review summaries
 
 2. backend/ingestion/pull_requests.py
-   - Updated _pr_payload() to include discussion comments section:
-     * Formats discussion_comments alongside review_comments
-     * Clear separation in payload for readability
+   - Updated _pr_payload() to include discussion comments section
 
-Graph Schema Impact:
-=====================
-No new node/edge types - uses existing Comment and PullRequest nodes:
-- Additional Comment nodes attached to PullRequest via REPLIES_TO edge
-- Enables queries distinguishing "review feedback" vs "discussion context"
 
-Dataset Impact:
-================
-- Same PR dataset: repo_{owner}_{repo}_prs
-- Additional field: discussion_comments alongside review_comments
-- Backwards compatible - existing data unchanged
-
-Query Examples:
-===============
-New search capabilities enabled:
-
-"What was discussed in the PR that introduced the new auth module?"
-
-"Show all architectural debates from the payment gateway refactor PR"
-
-"Which PR decisions were challenged in discussion but still merged?"
-
-"Find PRs where maintainers questioned the approach in discussion"
-
-Implementation Notes:
-=====================
-- Uses existing GitHub API: pr.get_issue_comments() (standard endpoint)
-- No new webhook events required (PR merged webhook already triggers ingestion)
-- Minimal code changes: ~10 lines across 2 files
-- Consistent with existing comment structure (author + body)
-
-Testing:
-=========
-1. Verify discussion comments appear in PR ingestion payload
-2. Confirm both comment types are stored in PR dataset
-3. Test queries distinguishing review vs discussion comments
-4. Validate graph relationships for both comment types
-"""
-Plan H - Issues Ingestion Implementation - Continuation
+Plan 3 - Deep AST, Releases/Tags, PR Review Summaries
 
 Summary:
 ==========
-This document continues the implementation of GitHub Issues ingestion. It addresses
-the question of whether all types of issue discussions are being captured.
+Three enhancements to complete the ingestion layer:
 
-Current Implementation Analysis:
-=================================
-The `issues.py` file currently extracts comments from:
-- `issue.get("comments", [])` - from the issue data structure
+A) Deeper AST via codegraph module (codegraph.py)
+   - Richer code structure with module dependency inference
+   - Language breakdown, file categorization
+   - Fallback when cognee[codegraph] not installed
 
-Based on the `_issue_to_dict()` function in `github_client.py`, the GitHub API data
-structure includes all issue comments (both top-level and replies) when fetching
-a single issue:
+B) Releases / Tags / Deployments ingestion (releases.py)
+   - GitHub releases with notes and assets
+   - Git tags with commit metadata
+   - Deployments with environment and status
 
-```python
-def _issue_to_dict(issue) -> dict[str, Any]:
-    comments = [
-        {"author": c.user.login if c.user else "unknown", "body": c.body}
-        for c in issue.comments or []  # Includes ALL comments
-    ]
-```
+C) PR Review Summaries (APPROVED/REQUEST_CHANGES bodies)
+   - Full review state + body text captured
+   - Enables "why was this PR approved/requested changes?" queries
 
-GitHub API Response Structure:
-===============================
-When using PyGithub's `gh_repo.get_issue()`, the returned `Issue` object includes:
+Files Created:
+===============
+1. backend/ingestion/codegraph.py (NEW)
+   - ingest_codegraph() - deep code structure ingestion
+   - _extract_entities_from_tree() - module dependency inference
 
-1. **Issue Comments** (Question section):
-   - Top-level comments about the issue
-   - All replies to top-level comments
-   - Comments from any user (maintainers, contributors, etc.)
-   - Stored in `issue.comments` list
+2. backend/ingestion/releases.py (NEW)
+   - ingest_releases() / ingest_tags() / ingest_deployments()
+   - ingest_all_releases() - combined ingestion
 
-2. **PR Review Comments** (separate from issues):
-   - Already captured in PRs via `pr.get_review_comments()`
-   - These are line-by-line review comments on PRs only
+Files Modified:
+===============
+3. backend/ingestion/github_client.py
+   - Added fetch_releases(), fetch_tags(), fetch_deployments()
+   - Added _extract_reviews() for PR review summaries
+   - Added reviews field to _pr_to_dict()
 
-Question Resolution:
-=====================
-**Yes, ALL issue discussions are being stored correctly!**
+4. backend/ingestion/pull_requests.py
+   - Added Reviews section to _pr_payload()
 
-The implementation captures:
-- ✅ Issue title, description, author, closed status
-- ✅ ALL issue comments (discussion section)
-- ✅ All nested replies and threads
-- ✅ Comments from any user role
-- ✅ Comment content AND authorship
+5. backend/ingestion/__init__.py
+   - Added codegraph and releases exports
 
-What is NOT being captured (by design):
-==========================================
-- ❌ PR review comments (already tracked separately via PRs)
-- ❌ Issue reactions/emojis
-- ❌ GitHub issue labels
-- ❌ Issue assignees
-- ❌ Issue timeline events (milestones, etc.)
+6. backend/service.py
+   - Replaced ast_modules with codegraph in full_sync()
+   - Added releases to full_sync()
+   - Added enqueue_release(), enqueue_pr_review()
 
+7. backend/main.py
+   - Added _handle_release() for published release events
+   - Added _handle_pull_request_review() for review events
+   - Added release and pull_request_review to webhook dispatch
 
-"
+Graph Schema Impact:
+- Release nodes (tag, name, notes, author, published date)
+- Tag nodes (name, sha, commit message, author, date)
+- Deployment nodes (id, ref, sha, environment, status)
+- Review nodes (author, state, body, submitted_at) on PRs
+- Release -> TAGGED_BY -> Commit
+- Deployment -> DEPLOYED_FROM -> Commit
+
+Dataset Naming:
+- repo_{owner}_{repo}_releases (releases + tags + deployments)
+- repo_{owner}_{repo}_codegraph (deep code structure)
+- repo_{owner}_{repo}_prs (now includes reviews field)
+
+Query Examples:
+===============
+"What release introduced the breaking change?"
+
+"Which PRs were approved with requested changes before merging?"
+
+"What was the deployment status for the v2.0 release?"
+
+"Show all REQUEST_CHANGES reviews on the payments module refactor"
+
+"Which modules depend on PaymentGateway based on code structure?"
 """
