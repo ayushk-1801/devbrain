@@ -101,6 +101,7 @@ def _pr_to_dict(pr) -> dict[str, Any]:
         for r in pr.get_reviews()
         if r.state == "APPROVED" and r.user
     ]
+    reviews = _extract_reviews(pr)
     return {
         "number": pr.number,
         "title": pr.title,
@@ -111,7 +112,23 @@ def _pr_to_dict(pr) -> dict[str, Any]:
         "review_comments": review_comments,
         "discussion_comments": discussion_comments,
         "approvals": approvals,
+        "reviews": reviews,
     }
+
+
+def _extract_reviews(pr) -> list[dict[str, Any]]:
+    """Extract full PR review summaries (APPROVED, REQUEST_CHANGES, COMMENT, etc.)."""
+    reviews = []
+    for r in pr.get_reviews():
+        if not r.user:
+            continue
+        reviews.append({
+            "author": r.user.login,
+            "state": r.state,
+            "body": r.body or "",
+            "submitted_at": r.submitted_at.isoformat() if r.submitted_at else "",
+        })
+    return reviews
 
 
 def fetch_issues(
@@ -207,6 +224,77 @@ def fetch_repo_tree(owner: str, repo: str) -> dict[str, Any]:
         if el.type == "blob"
     ]
     return {"default_branch": branch, "files": files}
+
+
+def fetch_releases(owner: str, repo: str) -> list[dict[str, Any]]:
+    """Return GitHub releases as plain dicts."""
+    gh_repo = _get_repo(owner, repo)
+    out: list[dict[str, Any]] = []
+    for release in gh_repo.get_releases():
+        out.append({
+            "tag": release.tag_name,
+            "name": release.title or release.tag_name,
+            "body": release.body or "",
+            "author": release.author.login if release.author else "unknown",
+            "created_at": release.created_at.isoformat() if release.created_at else "",
+            "published_at": release.published_at.isoformat() if release.published_at else "",
+            "prerelease": release.prerelease,
+            "draft": release.draft,
+            "assets": [
+                {"name": a.name, "size": a.size, "download_count": a.download_count}
+                for a in release.get_assets()
+            ],
+        })
+    return out
+
+
+def fetch_tags(owner: str, repo: str) -> list[dict[str, Any]]:
+    """Return git tags as plain dicts."""
+    gh_repo = _get_repo(owner, repo)
+    out: list[dict[str, Any]] = []
+    for tag in gh_repo.get_tags():
+        commit = tag.commit
+        out.append({
+            "name": tag.name,
+            "sha": commit.sha if commit else "",
+            "message": commit.commit.message if commit and commit.commit else "",
+            "author": commit.commit.author.name if commit and commit.commit and commit.commit.author else "unknown",
+            "date": commit.commit.author.date.isoformat() if commit and commit.commit and commit.commit.author and commit.commit.author.date else "",
+        })
+    return out
+
+
+def fetch_deployments(owner: str, repo: str) -> list[dict[str, Any]]:
+    """Return recent deployments as plain dicts."""
+    gh_repo = _get_repo(owner, repo)
+    out: list[dict[str, Any]] = []
+    try:
+        for dep in gh_repo.get_deployments():
+            status = None
+            try:
+                statuses = list(dep.get_statuses())
+                if statuses:
+                    latest = statuses[0]
+                    status = {
+                        "state": latest.state,
+                        "description": latest.description or "",
+                        "created_at": latest.created_at.isoformat() if latest.created_at else "",
+                    }
+            except Exception:
+                pass
+            out.append({
+                "id": dep.id,
+                "ref": dep.ref,
+                "sha": dep.sha,
+                "environment": dep.environment or "",
+                "description": dep.description or "",
+                "creator": dep.creator.login if dep.creator else "unknown",
+                "created_at": dep.created_at.isoformat() if dep.created_at else "",
+                "status": status,
+            })
+    except Exception:
+        pass  # Some repos may not have deployments permission
+    return out
 
 
 

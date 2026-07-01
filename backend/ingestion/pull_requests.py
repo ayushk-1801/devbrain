@@ -18,6 +18,10 @@ def _pr_payload(owner: str, repo: str, pr: dict[str, Any]) -> str:
     )
     approvals = ", ".join(pr.get("approvals", [])) or "(none)"
     files = "\n".join(f"  - {f}" for f in pr.get("files_changed", []))
+    reviews = "\n".join(
+        f"  - [{r['state']}] {r['author']} ({r['submitted_at']}): {r['body']}"
+        for r in pr.get("reviews", [])
+    )
     return (
         f"# Pull Request #{pr['number']} in {owner}/{repo}: {pr['title']}\n\n"
         f"Author: {pr['author']}\n"
@@ -25,6 +29,7 @@ def _pr_payload(owner: str, repo: str, pr: dict[str, Any]) -> str:
         f"Approved by: {approvals}\n\n"
         f"## Description\n{pr['body'] or '(no description)'}\n\n"
         f"## Files changed\n{files or '  (none)'}\n\n"
+        f"## Reviews\n{reviews or '  (none)'}\n\n"
         f"## Review comments\n{review_comments or '  (none)'}\n\n"
         f"## Discussion comments\n{discussion_comments or '  (none)'}\n"
     )
