@@ -32,8 +32,10 @@ devbrain/
 │   ├── main.py                      # FastAPI app + webhook endpoint
 │   ├── ingestion/
 │   │   ├── commits.py               # ingest_commit()
-│   │   ├── pull_requests.py         # ingest_pr()
+│   │   ├── pull_requests.py         # ingest_pr() + review summaries
 │   │   ├── issues.py                # ingest_issue()
+│   │   ├── releases.py              # ingest_release(), ingest_tag(), ingest_deployments()
+│   │   ├── codegraph.py             # deep AST via cognee[codegraph]
 │   │   ├── adrs.py                  # ingest_adrs()
 │   │   └── codebase.py              # ingest_repo_structure()
 │   ├── memory/
@@ -192,9 +194,9 @@ await cognee.forget(
 - **Graph edges:** `COMMIT → MODIFIED → File`, `Commit → AUTHORED_BY → Developer`
 
 ### Pull Requests
-- **Ingests:** title, description, review comments, approval decisions, linked issues
-- **Graph nodes:** `PullRequest`, `Developer`, `File`, `Issue`
-- **Graph edges:** `PR → CHANGED → File`, `PR → MOTIVATED_BY → Issue`, `PR → APPROVED_BY → Developer`
+- **Ingests:** title, description, review comments, discussion comments, review summaries, approval decisions, linked issues
+- **Graph nodes:** `PullRequest`, `Developer`, `File`, `Issue`, `Review`
+- **Graph edges:** `PR → CHANGED → File`, `PR → MOTIVATED_BY → Issue`, `PR → APPROVED_BY → Developer`, `Review → AUTHORED_BY → Developer`
 
 ### Architecture Decision Records (ADRs)
 - **Ingests:** markdown files from `/docs/decisions/`, `/adr/`, `/docs/adr/`, `/.decisions/`
@@ -207,6 +209,51 @@ await cognee.forget(
 - **Graph edges:** `Function → CALLS → Function`, `Class → INHERITS → Class`, `Module → DEPENDS_ON → Module`
 - **Install:** `pip install cognee[codegraph]`
 - **Languages supported:** Python, JS, TS, Go, Rust, Java, C#, PHP, Ruby
+
+### Releases / Tags / Deployments
+- **Ingests:** release notes, assets, git tags, deployment events
+- **Graph nodes:** `Release`, `Tag`, `Deployment`
+- **Graph edges:** `Release → TAGGED_BY → Tag`, `Deployment → DEPLOYED_FROM → Release`
+
+---
+
+## Changelog & User-Update Storage Architecture
+
+The changelog subsystem uses **two stores** — Redis for exact structured state,
+Cognee Cloud for semantic/NL-queryable knowledge. No flat files are used for state.
+
+```
+GitHub webhook fires
+        │
+        ├─→ Redis  (instant, exact — persists across restarts)
+        │
+        │   Timestamps & subscriptions
+        │     devbrain:cl:sync:global:{repo}               last global changelog run
+        │     devbrain:cl:sync:user:{repo}:{user}          user's last-seen watermark
+        │     devbrain:cl:subs:{repo}                      SET of subscribed usernames
+        │     devbrain:cl:webhook:{repo}:{user}            webhook URL
+        │
+        │   Per-user profiles (built from every webhook, zero extra GitHub API calls)
+        │     devbrain:pr:users:{repo}                     SET — all users with profiles
+        │     devbrain:pr:files:{repo}:{user}              SET — files user has committed to
+        │     devbrain:pr:prs:{repo}:{user}                SET — PR numbers user reviewed
+        │     devbrain:pr:mentions:{repo}:{user}           ZSET — score=unix_ts
+        │     devbrain:pr:mdata:{repo}:{user}:{type}:{id}  STRING — JSON of each mention
+        │     devbrain:pr:touches:{repo}:{user}            ZSET — score=unix_ts
+        │     devbrain:pr:tdata:{repo}:{user}:{path}::{sha} STRING — JSON of each file-touch
+        │
+        └─→ Cognee Cloud  (background asyncio.create_task, non-blocking)
+              dataset: repo_{owner}_{repo}_profiles
+              • One document per @mention   → "what was @alice mentioned about?"
+              • One document per file-touch → "who has touched the auth module?"
+```
+
+**Files written to disk** (`.devbrain/changelogs/`) are rendered Markdown output only —
+not persistent state. They are regenerated on every `POST /changelog/generate` call.
+
+**Key rule:** Webhook handlers update Redis + queue a Cognee background task (non-blocking).
+Digest generation (`GET /changelog/user/{username}`) reads only from Redis —
+zero live GitHub API calls for user-specific data.
 
 ---
 
@@ -230,40 +277,104 @@ Developer plan ($35 value). No local vector/graph stores required.
 
 ## Running the Project
 
-**One-command start (Docker):**
+### Option A — Docker (recommended)
 
 ```bash
-docker-compose up
+# 1. Copy and fill in your secrets
+cp .env.example .env
+# Required: COGNEE_API_KEY, GITHUB_TOKEN, GITHUB_WEBHOOK_SECRET
+
+# 2. Start everything
+docker-compose up --build
 ```
 
-This starts three services: `devbrain-api` (FastAPI on :8000), `devbrain-mcp` (Cognee
-MCP server on :8765), and `devbrain-ui` (React on :3000). A shared `cognee-data` volume
-persists the knowledge graph across restarts.
+This starts four services:
 
-**First ingestion:**
+| Service | Port | Purpose |
+|---------|------|---------|
+| `redis` | internal | Job queue + changelog/profile state |
+| `devbrain-api` | 8000 | FastAPI REST API + webhook receiver |
+| `devbrain-worker` | — | ARQ worker — runs Cognee ingestion tasks |
+| `devbrain-mcp` | — | MCP server for Claude Code (opt-in: `--profile mcp`) |
+
+All Redis state and Cognee Cloud data persist across restarts via Docker volumes.
+
+---
+
+### Option B — Local (no Docker)
+
+**Prerequisites:** Python 3.11+, Redis running locally.
+
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Set up environment
+cp .env.example .env
+# Required: COGNEE_API_KEY, GITHUB_TOKEN
+# REDIS_URL defaults to redis://localhost:6379
+
+# 3. Start Redis if not already running
+#    macOS:  brew services start redis
+#    Linux:  sudo systemctl start redis
+#    Docker: docker run -d -p 6379:6379 redis:7-alpine
+
+# 4a. Terminal 1 — API server
+uvicorn backend.main:app --reload --port 8000
+
+# 4b. Terminal 2 — ARQ worker (must run alongside the API)
+python -m arq backend.worker.WorkerSettings
+```
+
+Both processes must run at the same time. The API enqueues jobs to Redis;
+the worker picks them up and runs Cognee ingestion.
+
+---
+
+### First ingestion
 
 ```bash
 curl -X POST "http://localhost:8000/ingest" \
   -H "Content-Type: application/json" \
   -d '{"repo": "owner/your-repo", "sync_history_days": 90}'
+
+# Poll job status
+curl "http://localhost:8000/jobs/{job_id}"
 ```
 
-**First query:**
+### First query
 
 ```bash
 curl "http://localhost:8000/query?q=why+was+auth+refactored&repo=owner/your-repo"
 ```
 
-**Connect to Claude Code:**
+### Changelog & user updates
+
+```bash
+# Subscribe a user (optionally register a webhook for push notifications)
+curl -X POST "http://localhost:8000/changelog/subscribe" \
+  -H "Content-Type: application/json" \
+  -d '{"repo": "owner/your-repo", "username": "alice", "notify_webhook": "https://..."}'
+
+# Generate global changelog + all subscribed user digests
+curl -X POST "http://localhost:8000/changelog/generate?repo=owner/your-repo&notify=true"
+
+# Read alice's personal digest (refresh=true re-fetches from GitHub)
+curl "http://localhost:8000/changelog/user/alice?repo=owner/your-repo&refresh=true"
+
+# Read the global changelog
+curl "http://localhost:8000/changelog?repo=owner/your-repo"
+```
+
+### Connect to Claude Code
 
 ```bash
 claude mcp add devbrain -s project \
-  -e LLM_API_KEY="$OPENAI_API_KEY" \
+  -e LLM_API_KEY="$COGNEE_API_KEY" \
   -- uv --directory ./cognee-mcp run cognee-mcp
 ```
 
-Once connected, Claude Code calls DevBrain automatically in every session — no
-explicit prompting required.
+Once connected, Claude Code calls DevBrain automatically in every session.
 
 ---
 
