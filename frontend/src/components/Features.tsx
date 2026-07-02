@@ -111,7 +111,7 @@ export function Features() {
               className="group flex flex-col items-center gap-2 sm:gap-3 relative min-w-[80px] sm:min-w-[120px] snap-center cursor-pointer pb-2 sm:pb-3"
             >
               <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${isActive ? 'text-text-primary' : 'text-text-inactive group-hover:text-text-muted transition-colors'}`} />
-              <div className="flex flex-col items-center">
+              <div className="relative pb-1 flex flex-col items-center">
                 <span className={`text-[12px] sm:text-[14px] ${isActive ? 'text-text-primary font-bold' : 'text-text-inactive group-hover:text-text-muted transition-colors'}`}>
                   {tab.label}
                 </span>
@@ -119,7 +119,7 @@ export function Features() {
                 {/* Active Underline with Loading Animation */}
                 {isActive && (
                   <motion.div 
-                    className="absolute bottom-0 left-0 h-[2px] bg-text-primary"
+                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-text-primary"
                     initial={{ width: "0%" }}
                     animate={{ width: "100%" }}
                     transition={{ duration: 8, ease: "linear" }}
