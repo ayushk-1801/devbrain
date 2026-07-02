@@ -32,6 +32,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="DevBrain", version="0.1.0", lifespan=lifespan)
 
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # --- Models --------------------------------------------------------------
 
@@ -100,6 +110,15 @@ async def prune_module(owner: str, repo: str, module: str) -> dict:
         return await service.forget_module(f"{owner}/{repo}", module)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/graph")
+async def graph_data() -> dict:
+    """Return the full knowledge graph (nodes + edges) for visualization."""
+    try:
+        return await service.get_graph_data()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 # --- Webhook -------------------------------------------------------------

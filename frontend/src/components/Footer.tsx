@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'motion/react';
+import { Logo } from './ui/Logo';
 
 const VIEWBOX_WIDTH = 1410;
 
@@ -132,11 +133,7 @@ export function Footer() {
 
       {/* CTA Content */}
       <div className="w-full flex flex-col items-center justify-center pt-8 pb-16 px-6 z-10 bg-transparent">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-primary mb-8">
-          <circle cx="8" cy="12" r="4" />
-          <circle cx="16" cy="12" r="4" />
-          <line x1="12" y1="12" x2="16" y2="12" />
-        </svg>
+        <Logo className="h-6 w-auto text-text-primary mb-8" />
 
         <h2 className="font-display text-[40px] md:text-[56px] font-black text-text-primary leading-[1.1] max-w-[720px] text-center tracking-tight">
           Build AI agents that actually<br />understand your codebase.

@@ -83,7 +83,7 @@ export function Benefits() {
   const yTransforms = [y0, y1, y2, y3, y4];
 
   return (
-    <section ref={containerRef} className="relative w-full h-auto lg:h-[250vh] overflow-visible">
+    <section ref={containerRef} id="how-it-works" className="relative w-full h-auto lg:h-[250vh] overflow-visible">
       {/* Sticky container that stays in the viewport on desktop */}
       <div className="relative lg:sticky lg:top-0 lg:left-0 w-full h-auto lg:h-screen overflow-visible lg:overflow-hidden flex flex-col items-center justify-center pt-[80px] md:pt-[100px] pb-[80px] px-6">
         

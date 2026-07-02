@@ -91,6 +91,17 @@ async def task_forget_module(ctx: dict, repo: str, module: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Graph data task
+# ---------------------------------------------------------------------------
+
+async def task_get_graph_data(ctx: dict) -> dict:
+    """Return the full knowledge graph data for visualization."""
+    from backend.memory.client import get_graph_data
+    logger.info("task_get_graph_data: fetching graph data")
+    return await get_graph_data()
+
+
+# ---------------------------------------------------------------------------
 # Startup / shutdown hooks — connect Cognee once per worker process
 # ---------------------------------------------------------------------------
 
@@ -119,6 +130,7 @@ class WorkerSettings:
         task_query,
         task_refresh,
         task_forget_module,
+        task_get_graph_data,
     ]
     on_startup = startup
     on_shutdown = shutdown
