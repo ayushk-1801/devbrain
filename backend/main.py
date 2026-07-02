@@ -439,9 +439,6 @@ async def _handle_release(repo: str, payload: dict) -> None:
     if payload.get("action") != "published":
         return
     try:
-        owner, _ = repo.split("/", 1)
-        from backend.ingestion import releases as rel_mod
-
         release = payload.get("release", {})
         tag = release.get("tag_name", "")
         await service.enqueue_release(repo, tag)
