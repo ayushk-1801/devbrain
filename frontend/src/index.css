@@ -90,6 +90,10 @@
     --color-border-soft: #2D2B24;
   }
   
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     background-color: var(--color-bg);
     color: var(--color-text-primary);

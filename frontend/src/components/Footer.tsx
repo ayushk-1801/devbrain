@@ -91,11 +91,11 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "lg:top-[2%] lg:left-[16%]",
+    position: "top-[2%] left-[4%] lg:left-[16%]",
     dx: -60,
     dy: -40,
     logo: (
-      <img src="/claude-ai.svg" alt="Claude Code" className="w-11 h-11 object-contain select-none" />
+      <img src="/claude-ai.svg" alt="Claude Code" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
   {
@@ -103,11 +103,11 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "lg:top-[12%] lg:right-[15%]",
+    position: "top-[12%] right-[5%] lg:right-[15%]",
     dx: 60,
     dy: -30,
     logo: (
-      <img src="/cursor.png" alt="Cursor" className="w-11 h-11 object-contain select-none" />
+      <img src="/cursor.png" alt="Cursor" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
   {
@@ -115,11 +115,11 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "lg:top-[22%] lg:left-[4%]",
+    position: "top-[22%] left-[2%] lg:left-[4%]",
     dx: -80,
     dy: -10,
     logo: (
-      <img src="/github-copilot-removebg-preview.png" alt="GitHub Copilot" className="w-11 h-11 object-contain select-none" />
+      <img src="/github-copilot-removebg-preview.png" alt="GitHub Copilot" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
   {
@@ -127,11 +127,11 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "lg:top-[44%] lg:left-[14%]",
+    position: "top-[44%] left-[6%] lg:left-[14%]",
     dx: -60,
     dy: 10,
     logo: (
-      <img src="/google-antigravity.png" alt="Antigravity" className="w-11 h-11 object-contain select-none" />
+      <img src="/google-antigravity.png" alt="Antigravity" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
   {
@@ -139,11 +139,11 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "lg:top-[34%] lg:right-[3%]",
+    position: "top-[34%] right-[2%] lg:right-[3%]",
     dx: 70,
     dy: -10,
     logo: (
-      <img src="/Zed_Editor_Logo.png" alt="Zed" className="w-11 h-11 object-contain select-none" />
+      <img src="/Zed_Editor_Logo.png" alt="Zed" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
   {
@@ -151,11 +151,11 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "lg:top-[56%] lg:right-[18%]",
+    position: "top-[56%] right-[8%] lg:right-[18%]",
     dx: 50,
     dy: 20,
     logo: (
-      <img src="/codex-color-removebg-preview.png" alt="OpenAI Codex" className="w-11 h-11 object-contain select-none" />
+      <img src="/codex-color-removebg-preview.png" alt="OpenAI Codex" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
   {
@@ -163,11 +163,11 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "lg:top-[68%] lg:left-[2%]",
+    position: "top-[68%] left-[1%] lg:left-[2%]",
     dx: -70,
     dy: 40,
     logo: (
-      <img src="/n8n-icon.webp" alt="n8n" className="w-11 h-11 object-contain select-none" />
+      <img src="/n8n-icon.webp" alt="n8n" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
   {
@@ -175,11 +175,11 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "lg:top-[88%] lg:left-[12%]",
+    position: "top-[88%] left-[5%] lg:left-[12%]",
     dx: -50,
     dy: 60,
     logo: (
-      <img src="/opencode-logo-removebg-preview.png" alt="OpenCode" className="w-11 h-11 object-contain select-none" />
+      <img src="/opencode-logo-removebg-preview.png" alt="OpenCode" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
   {
@@ -187,11 +187,11 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "lg:top-[74%] lg:right-[6%]",
+    position: "top-[74%] right-[3%] lg:right-[6%]",
     dx: 70,
     dy: 40,
     logo: (
-      <img src="/images-removebg-preview.png" alt="Windsurf" className="w-11 h-11 object-contain select-none" />
+      <img src="/images-removebg-preview.png" alt="Windsurf" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
   {
@@ -199,24 +199,24 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "lg:top-[92%] lg:right-[12%]",
+    position: "top-[92%] right-[7%] lg:right-[12%]",
     dx: 50,
     dy: 60,
     logo: (
-      <img src="/images12-removebg-preview.png" alt="Aider" className="w-11 h-11 object-contain select-none" />
+      <img src="/images12-removebg-preview.png" alt="Aider" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   }
 ];
 
 function AgentIcon({ agent, progress }: { agent: typeof agents[0]; progress: any }) {
-  const x = useTransform(progress, [0, 1], [0, agent.dx]);
-  const y = useTransform(progress, [0, 1], [0, agent.dy]);
+  const x = useTransform(progress, [0, 1], [0, agent.dx * (typeof window !== 'undefined' && window.innerWidth < 1024 ? 0.35 : 1)]);
+  const y = useTransform(progress, [0, 1], [0, agent.dy * (typeof window !== 'undefined' && window.innerWidth < 1024 ? 0.35 : 1)]);
 
   return (
     <motion.div
       style={{ x, y }}
       whileHover={{ scale: 1.1, rotate: Math.random() > 0.5 ? 3 : -3 }}
-      className={`absolute pointer-events-auto ${agent.position} w-20 h-20 rounded-[24px] ${agent.bg} border border-border-soft flex items-center justify-center cursor-pointer transition-[box-shadow,border-color] duration-300 shadow-sm ${agent.shadowColor}`}
+      className={`absolute pointer-events-auto ${agent.position} w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-[14px] sm:rounded-[18px] lg:rounded-[24px] ${agent.bg} border border-border-soft flex items-center justify-center cursor-pointer transition-[box-shadow,border-color] duration-300 shadow-sm ${agent.shadowColor}`}
       title={agent.name}
     >
       {agent.logo}
@@ -280,8 +280,8 @@ export function Footer() {
 
       {/* CTA Content */}
       <div ref={ctaRef} className="w-full relative flex flex-col items-center justify-center pt-24 pb-28 px-6 z-10 bg-transparent max-w-[1200px] mx-auto overflow-visible min-h-[520px]">
-        {/* Desktop Scattered Agent Logos */}
-        <div className="hidden lg:block absolute inset-0 w-full h-full pointer-events-none z-0">
+        {/* Scattered Agent Logos (Mobile & Desktop) */}
+        <div className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden">
           {agents.map((agent, index) => (
             <AgentIcon key={index} agent={agent} progress={scrollYProgress} />
           ))}
@@ -312,23 +312,7 @@ export function Footer() {
           </button>
         </div>
 
-        {/* Mobile/Tablet Scattered Agent Logos */}
-        <div className="lg:hidden w-full flex flex-wrap items-center justify-center gap-3 mt-10 z-10">
-          {agents.map((agent, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, scale: 0.8 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, ease: "easeOut", delay: index * 0.05 }}
-              whileHover={{ scale: 1.05 }}
-              className={`w-16 h-16 rounded-[18px] ${agent.bg} border border-border-soft flex items-center justify-center cursor-pointer shadow-sm ${agent.shadowColor}`}
-              title={agent.name}
-            >
-              {agent.logo}
-            </motion.div>
-          ))}
-        </div>
+
       </div>
 
       {/* Bottom Ribbon Wave */}
