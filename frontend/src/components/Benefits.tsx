@@ -1,40 +1,40 @@
 import { motion, useScroll, useTransform } from 'motion/react';
-import { Bot, Cpu, Code2, Users, UserPlus } from 'lucide-react';
+import { Cpu, Database, Code2, GitBranch, Sparkles } from 'lucide-react';
 import React from 'react';
 
 const benefits = [
   {
-    icon: Bot,
-    title: "AI Coding Agents",
-    body: "Claude Code, Cursor, and any MCP-compatible agent gets full codebase memory automatically. Grounded, sourced, non-hallucinatory code gen.",
+    icon: Cpu,
+    title: "Surgical Memory Pruning",
+    body: "Cleanly dissolve deprecated modules or legacy refactors using the forget() API. Removes subgraphs in real-time while keeping the rest of the memory intact.",
     bg: "var(--color-accent-peach)",
     zIndex: 5
   },
   {
-    icon: Cpu,
-    title: "Developer Tooling Teams",
-    body: "Embed DevBrain's query API into your IDE plugin, CI pipeline, or internal developer portal. Instant knowledge layer for your toolchain.",
+    icon: Database,
+    title: "Hybrid Memory Engine",
+    body: "Combines vector databases for semantic concepts and graph databases for multi-hop relationship traversal. Answer complex 'why was this changed' queries instantly.",
     bg: "var(--color-accent-yellow)",
     zIndex: 4
   },
   {
     icon: Code2,
-    title: "Senior Engineers",
-    body: "Stop answering 'why does this exist?' for the fourth time. DevBrain answers it permanently so you can focus on building, not explaining.",
+    title: "AST & Dependency Parsing",
+    body: "Parses your codebases down to abstract syntax trees using cognee[codegraph]. Maps function calls, class inheritances, and modules directly into the memory graph.",
     bg: "var(--color-accent-sage)",
     zIndex: 3
   },
   {
-    icon: Users,
-    title: "Engineering Managers",
-    body: "Onboard new engineers in days, not months. Audit architectural compliance without reading every PR. Full visibility, zero manual work.",
+    icon: GitBranch,
+    title: "Automated GitHub Sync",
+    body: "Real-time webhook sync captures commits, pull requests, issues, and ADRs. Ingests raw repository events and automatically turns them into structured semantic memory.",
     bg: "var(--color-accent-powder)",
     zIndex: 2
   },
   {
-    icon: UserPlus,
-    title: "New Hires",
-    body: "Understand a year of context on day one. Ask anything about the codebase in plain English and get a sourced, accurate answer - no senior engineer required.",
+    icon: Sparkles,
+    title: "Self-Improving Memory",
+    body: "Runs weekly background consolidation to prune stale nodes, strengthen frequently-queried paths, and surgically delete deprecated subgraphs on command.",
     bg: "var(--color-accent-mint)",
     zIndex: 1
   }
@@ -121,10 +121,10 @@ export function Benefits() {
           className="flex flex-col items-center text-center w-full max-w-[800px] z-10 lg:-mt-16"
         >
           <h2 className="font-display text-[36px] md:text-[56px] lg:text-[60px] font-extrabold text-text-primary leading-[1.1] tracking-tight">
-            DevBrain is for Every Engineer
+            Engineered for Complete Codebase Intelligence
           </h2>
           <p className="font-display text-[16px] md:text-[18px] text-text-muted max-w-[640px] mt-6 leading-[1.7]">
-            From new hires to AI agents - anyone who touches the codebase benefits from persistent memory.
+            A hybrid memory layer mapping commits, pull requests, ADRs, and code AST into a single queryable knowledge graph.
           </p>
         </motion.div>
 
