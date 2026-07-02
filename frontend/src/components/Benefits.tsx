@@ -68,45 +68,19 @@ export function Benefits() {
   const opacity0 = useTransform(scrollYProgress, [0.60, 0.75], [0, 1]);
   const y0 = useTransform(scrollYProgress, [0.60, 0.75], [400, 0]);
 
-  // Color transitions for each card (active highlight when they are the top card)
-  // Card 4 (New Hires) color transition (active during 0.00 - 0.15)
-  const bg4 = useTransform(
-    scrollYProgress,
-    [0.00, 0.13, 0.15, 1.00],
-    ["#D8F0E4", "#D8F0E4", "#F3F3E8", "#F3F3E8"]
-  );
-
-  // Card 3 (Engineering Managers) color transition (active during 0.15 - 0.30)
-  const bg3 = useTransform(
-    scrollYProgress,
-    [0.00, 0.15, 0.17, 0.28, 0.30, 1.00],
-    ["#F3F3E8", "#F3F3E8", "#CFE3EA", "#CFE3EA", "#F3F3E8", "#F3F3E8"]
-  );
-
-  // Card 2 (Senior Engineers) color transition (active during 0.30 - 0.45)
-  const bg2 = useTransform(
-    scrollYProgress,
-    [0.00, 0.30, 0.32, 0.43, 0.45, 1.00],
-    ["#F3F3E8", "#F3F3E8", "#D9E7C9", "#D9E7C9", "#F3F3E8", "#F3F3E8"]
-  );
-
-  // Card 1 (Developer Tooling Teams) color transition (active during 0.45 - 0.60)
-  const bg1 = useTransform(
-    scrollYProgress,
-    [0.00, 0.45, 0.47, 0.58, 0.60, 1.00],
-    ["#F3F3E8", "#F3F3E8", "#F3FE7A", "#F3FE7A", "#F3F3E8", "#F3F3E8"]
-  );
-
-  // Card 0 (AI Coding Agents) color transition (active during 0.60 - 1.00)
-  const bg0 = useTransform(
-    scrollYProgress,
-    [0.00, 0.60, 0.62, 1.00],
-    ["#F3F3E8", "#F3F3E8", "#FFD3BA", "#FFD3BA"]
-  );
+  const [activeIndex, setActiveIndex] = React.useState(4);
+  React.useEffect(() => {
+    return scrollYProgress.onChange((latest) => {
+      if (latest < 0.15) setActiveIndex(4);
+      else if (latest < 0.30) setActiveIndex(3);
+      else if (latest < 0.45) setActiveIndex(2);
+      else if (latest < 0.60) setActiveIndex(1);
+      else setActiveIndex(0);
+    });
+  }, [scrollYProgress]);
 
   const opacities = [opacity0, opacity1, opacity2, opacity3, opacity4];
   const yTransforms = [y0, y1, y2, y3, y4];
-  const bgs = [bg0, bg1, bg2, bg3, bg4];
 
   return (
     <section ref={containerRef} className="relative w-full h-auto lg:h-[250vh] overflow-visible">
@@ -145,17 +119,24 @@ export function Benefits() {
                   top: yOffset,
                   left: `calc(50% - 240px + ${xOffset - 320}px)`,
                   zIndex: card.zIndex,
-                  backgroundColor: bgs[idx],
                   opacity: opacities[idx],
                   y: yTransforms[idx]
                 }}
-                className="w-[480px] rounded-[24px] p-8 md:p-10 border-[12px] border-[var(--color-bg)] shadow-none"
+                className={`w-[480px] rounded-[24px] p-8 md:p-10 border-[12px] border-bg shadow-none transition-colors duration-300 ${
+                  activeIndex === idx
+                    ? idx === 4 ? 'bg-accent-mint text-[#040200]'
+                      : idx === 3 ? 'bg-accent-powder text-[#040200]'
+                      : idx === 2 ? 'bg-accent-sage text-[#040200]'
+                      : idx === 1 ? 'bg-accent-yellow text-[#040200]'
+                      : 'bg-accent-peach text-[#040200]'
+                    : 'bg-bg-secondary text-text-muted'
+                }`}
               >
-                <Icon size={28} className="text-text-primary mb-6" />
-                <h3 className="font-display text-[22px] font-bold text-text-primary mb-3 leading-tight tracking-tight">
+                <Icon size={28} className={`${activeIndex === idx ? 'text-[#040200]' : 'text-text-primary'} mb-6`} />
+                <h3 className={`font-display text-[22px] font-bold mb-3 leading-tight tracking-tight ${activeIndex === idx ? 'text-[#040200]' : 'text-text-primary'}`}>
                   {card.title}
                 </h3>
-                <p className="font-display text-[16px] text-text-muted leading-[1.6]">
+                <p className={`font-display text-[16px] leading-[1.6] ${activeIndex === idx ? 'text-[#6B6A5E]' : 'text-text-muted'}`}>
                   {card.body}
                 </p>
               </motion.div>
@@ -191,14 +172,19 @@ export function Benefits() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-100px" }}
                 transition={{ duration: 0.4, ease: "easeOut", delay: idx * 0.1 }}
-                style={{ backgroundColor: card.bg }}
-                className="w-full rounded-[24px] p-6 border-[8px] border-[var(--color-bg)] shadow-none"
+                className={`w-full rounded-[24px] p-6 border-[8px] border-bg shadow-none ${
+                  idx === 4 ? 'bg-accent-mint'
+                    : idx === 3 ? 'bg-accent-powder'
+                    : idx === 2 ? 'bg-accent-sage'
+                    : idx === 1 ? 'bg-accent-yellow'
+                    : 'bg-accent-peach'
+                }`}
               >
-                <Icon size={28} className="text-text-primary mb-6" />
-                <h3 className="font-display text-[22px] font-bold text-text-primary mb-3 leading-tight tracking-tight">
+                <Icon size={28} className="text-[#040200] mb-6" />
+                <h3 className="font-display text-[22px] font-bold text-[#040200] mb-3 leading-tight tracking-tight">
                   {card.title}
                 </h3>
-                <p className="font-display text-[16px] text-text-muted leading-[1.6]">
+                <p className="font-display text-[16px] text-[#6B6A5E] leading-[1.6]">
                   {card.body}
                 </p>
               </motion.div>

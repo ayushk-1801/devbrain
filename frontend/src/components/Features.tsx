@@ -145,7 +145,7 @@ export function Features() {
             {tabContent[activeTab].map((card, idx) => (
               <div 
                 key={idx}
-                className="bg-bg-card rounded-[24px] p-[40px] md:p-[56px] flex flex-col h-full hover:-translate-y-[4px] hover:shadow-[0_12px_40px_rgba(4,2,0,0.08)] transition-all duration-300"
+                className="bg-bg-card rounded-[24px] p-[40px] md:p-[56px] flex flex-col h-full transition-all duration-300"
               >
                 <div className="w-full h-[160px] bg-bg rounded-[16px] mb-8 overflow-hidden flex items-center justify-center shrink-0">
                   {card.illustration || (

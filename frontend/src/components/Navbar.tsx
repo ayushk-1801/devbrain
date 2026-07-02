@@ -1,8 +1,35 @@
-import { Github } from 'lucide-react';
+import { Github, Sun, Moon } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'motion/react';
+import { useState, useEffect } from 'react';
 
 export function Navbar() {
   const { scrollY } = useScroll();
+
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    return scrollY.onChange((latest) => {
+      setScrolled(latest > 50);
+    });
+  }, [scrollY]);
 
   // Morph values continuously based on scrollY (0px to 200px scroll range)
   const height = useTransform(scrollY, [0, 200], [70, 54]);
@@ -10,24 +37,6 @@ export function Navbar() {
   const maxWidth = useTransform(scrollY, [0, 200], [2560, 1024]); // increased to 1024 to prevent squishing
   const top = useTransform(scrollY, [0, 200], [0, 16]);
   const borderRadius = useTransform(scrollY, [0, 200], [0, 27]); // half of height 54 is 27px (perfect pill shape)
-
-  const backgroundColor = useTransform(
-    scrollY,
-    [0, 200],
-    ["rgba(254, 254, 243, 1)", "rgba(254, 254, 243, 0.85)"]
-  );
-
-  const borderColor = useTransform(
-    scrollY,
-    [0, 200],
-    ["rgba(34, 34, 34, 0)", "rgba(34, 34, 34, 0.08)"]
-  );
-
-  const boxShadow = useTransform(
-    scrollY,
-    [0, 200],
-    ["0px 0px 0px rgba(4, 2, 0, 0)", "0px 12px 32px rgba(4, 2, 0, 0.04)"]
-  );
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
@@ -37,12 +46,13 @@ export function Navbar() {
           width,
           maxWidth,
           top,
-          borderRadius,
-          backgroundColor,
-          borderColor,
-          boxShadow
+          borderRadius
         }}
-        className="w-full pointer-events-auto flex items-center justify-between relative backdrop-blur-md border px-6 md:px-7"
+        className={`w-full pointer-events-auto flex items-center justify-between relative backdrop-blur-md border px-6 md:px-7 transition-all duration-300 ${
+          scrolled 
+            ? 'bg-bg/85 border-border/8 shadow-[0_4px_16px_rgba(4,2,0,0.02)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.1)]' 
+            : 'bg-bg border-transparent shadow-none'
+        }`}
       >
         {/* Left */}
         <div className="flex items-center gap-3">
@@ -65,10 +75,17 @@ export function Navbar() {
 
         {/* Right */}
         <div className="flex items-center gap-5">
+          <button 
+            onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+            className="text-text-muted hover:text-text-primary transition-colors cursor-pointer outline-none p-1.5 rounded-full hover:bg-bg-secondary"
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
           <a href="https://github.com/ayushk-1801/devbrain" target="_blank" rel="noopener noreferrer" aria-label="GitHub Repository" className="flex items-center gap-2 text-text-muted hover:text-text-primary transition-colors">
             <Github size={20} />
           </a>
-          <button className="hidden md:block bg-bg-secondary border-[1.5px] border-border text-text-primary font-mono text-[14px] font-medium px-4 py-1.5 rounded-full cursor-pointer hover:bg-[#000000] hover:text-white hover:border-[#000000] transition-colors duration-200">
+          <button className="hidden md:block bg-bg-secondary border-[1.5px] border-border text-text-primary font-mono text-[14px] font-medium px-4 py-1.5 rounded-full cursor-pointer hover:bg-[#000000] hover:text-white hover:border-[#000000] transition-colors duration-200 dark:hover:bg-[#FFFFFF] dark:hover:text-black dark:hover:border-[#FFFFFF]">
             Get Started
           </button>
         </div>

@@ -62,15 +62,17 @@ export function UseCases() {
       <div className="flex flex-row justify-center gap-3 mt-12 mb-16">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
-          const activeBg = tabColors[tab.id];
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              style={isActive ? { backgroundColor: activeBg } : {}}
               className={`font-mono text-[14px] px-[24px] py-[10px] rounded-full border-[1.5px] transition-colors cursor-pointer ${
                 isActive 
-                  ? 'border-border text-text-primary font-bold' 
+                  ? 'border-border text-[#040200] font-bold ' + (
+                      tab.id === 'onboarding' ? 'bg-accent-mint'
+                        : tab.id === 'review' ? 'bg-accent-powder'
+                        : 'bg-accent-blush'
+                    )
                   : 'border-text-muted bg-transparent text-text-muted hover:bg-bg-secondary'
               }`}
             >
@@ -93,18 +95,20 @@ export function UseCases() {
           >
             {useCaseContent[activeTab].map((card, idx) => {
               const Icon = card.icon;
-              const cardBg = tabColors[activeTab];
               return (
                 <div 
                   key={idx}
-                  style={{ backgroundColor: cardBg }}
-                  className="rounded-[24px] p-[40px] md:p-[48px] flex flex-col hover:-translate-y-[4px] hover:shadow-[0_12px_40px_rgba(4,2,0,0.08)] transition-all duration-300 border border-border/10"
+                  className={`rounded-[24px] p-[40px] md:p-[48px] flex flex-col transition-all duration-300 border border-border/10 ${
+                    activeTab === 'onboarding' ? 'bg-accent-mint'
+                      : activeTab === 'review' ? 'bg-accent-powder'
+                      : 'bg-accent-blush'
+                  }`}
                 >
-                  <Icon size={32} className="text-text-primary mb-6" />
-                  <h3 className="font-display text-[20px] md:text-[22px] font-bold text-text-primary mb-3 leading-tight tracking-tight">
+                  <Icon size={32} className="text-[#040200] mb-6" />
+                  <h3 className="font-display text-[20px] md:text-[22px] font-bold text-[#040200] mb-3 leading-tight tracking-tight">
                     {card.title}
                   </h3>
-                  <p className="font-display text-[15px] md:text-[16px] text-text-muted leading-[1.6]">
+                  <p className="font-display text-[15px] md:text-[16px] text-[#6B6A5E] leading-[1.6]">
                     {card.body}
                   </p>
                 </div>

@@ -123,7 +123,7 @@ export function Footer() {
           <path 
             d="M 0 50 L 300 50 C 380 50, 420 120, 500 120 L 940 120 C 1020 120, 1060 50, 1140 50 L 1440 50" 
             fill="none" 
-            stroke="var(--color-text-primary)" 
+            stroke="#040200" 
             strokeWidth="1.2" 
             strokeOpacity="0.8"
           />
@@ -188,7 +188,7 @@ export function Footer() {
           <path 
             d="M 0 110 L 300 110 C 380 110, 420 40, 500 40 L 940 40 C 1020 40, 1060 110, 1140 110 L 1440 110" 
             fill="none" 
-            stroke="var(--color-text-primary)" 
+            stroke="#040200" 
             strokeWidth="1.2" 
             strokeOpacity="0.8"
           />
