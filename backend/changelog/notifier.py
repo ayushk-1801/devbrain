@@ -141,9 +141,11 @@ def _log_user(u: UserUpdates) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def dispatch_global(cl: GlobalChangelog) -> None:
-    """Log a summary of the global changelog.  Extend here for Slack/email."""
+async def dispatch_global(cl: GlobalChangelog, webhook_url: str | None = None) -> None:
+    """Log a summary of the global changelog and POST to webhook if provided."""
     _log_global(cl)
+    if webhook_url:
+        await _notify_webhook(webhook_url, _global_summary(cl))
 
 
 async def dispatch_user(repo: str, username: str, updates: UserUpdates) -> None:

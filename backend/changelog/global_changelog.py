@@ -12,6 +12,7 @@ genuinely new events.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -101,11 +102,11 @@ class GlobalChangelog:
 # ---------------------------------------------------------------------------
 
 
-def _safe_repo_name(repo: str) -> str:
+def safe_repo_name(repo: str) -> str:
     return repo.replace("/", "_").replace("-", "_").lower()
 
 
-def _fetch_commits(gh_repo, since: Optional[datetime]) -> list[CommitEntry]:
+def fetch_commits(gh_repo, since: Optional[datetime]) -> list[CommitEntry]:
     entries: list[CommitEntry] = []
     kwargs: dict = {}
     if since:
@@ -137,14 +138,16 @@ def _fetch_commits(gh_repo, since: Optional[datetime]) -> list[CommitEntry]:
     return entries
 
 
-def _fetch_prs(gh_repo, since: Optional[datetime]) -> list[PREntry]:
+def fetch_prs(gh_repo, since: Optional[datetime]) -> list[PREntry]:
     entries: list[PREntry] = []
     try:
         # Get recently updated PRs (both open and closed)
         for pr in gh_repo.get_pulls(state="all", sort="updated", direction="desc"):
             if since and pr.updated_at.replace(tzinfo=timezone.utc) < since:
                 break
-            state = "merged" if pr.merged else pr.state
+            # Use merged_at (available in list responses) to avoid an extra API
+            # call per PR that pr.merged (a lazy attribute) would trigger.
+            state = "merged" if pr.merged_at is not None else pr.state
             entries.append(
                 PREntry(
                     number=pr.number,
@@ -166,7 +169,7 @@ def _fetch_prs(gh_repo, since: Optional[datetime]) -> list[PREntry]:
     return entries
 
 
-def _fetch_issues(gh_repo, since: Optional[datetime]) -> list[IssueEntry]:
+def fetch_issues(gh_repo, since: Optional[datetime]) -> list[IssueEntry]:
     entries: list[IssueEntry] = []
     kwargs: dict = {"state": "all", "sort": "updated", "direction": "desc"}
     if since:
@@ -197,7 +200,7 @@ def _fetch_issues(gh_repo, since: Optional[datetime]) -> list[IssueEntry]:
     return entries
 
 
-def _fetch_releases(gh_repo, since: Optional[datetime]) -> list[ReleaseEntry]:
+def fetch_releases(gh_repo, since: Optional[datetime]) -> list[ReleaseEntry]:
     entries: list[ReleaseEntry] = []
     try:
         for rel in gh_repo.get_releases():
@@ -338,21 +341,28 @@ async def generate_global_changelog(
 
     logger.info("Generating global changelog for %s (since=%s)", full_repo, since)
 
-    gh = github_client()
-    gh_repo = gh.get_repo(full_repo)
+    gh = await asyncio.to_thread(github_client)
+    gh_repo = await asyncio.to_thread(gh.get_repo, full_repo)
+
+    commits, prs, issues, releases = await asyncio.gather(
+        asyncio.to_thread(fetch_commits, gh_repo, since),
+        asyncio.to_thread(fetch_prs, gh_repo, since),
+        asyncio.to_thread(fetch_issues, gh_repo, since),
+        asyncio.to_thread(fetch_releases, gh_repo, since),
+    )
 
     changelog = GlobalChangelog(
         repo=full_repo,
         since=since,
         generated_at=generated_at,
-        commits=_fetch_commits(gh_repo, since),
-        pull_requests=_fetch_prs(gh_repo, since),
-        issues=_fetch_issues(gh_repo, since),
-        releases=_fetch_releases(gh_repo, since),
+        commits=commits,
+        pull_requests=prs,
+        issues=issues,
+        releases=releases,
     )
 
     # Persist the markdown file
-    safe = _safe_repo_name(full_repo)
+    safe = safe_repo_name(full_repo)
     md_path = tracker.changelogs_dir() / f"GLOBAL_CHANGELOG_{safe}.md"
     md_path.write_text(_render_markdown(changelog), encoding="utf-8")
 
@@ -367,6 +377,6 @@ async def generate_global_changelog(
 
 def get_global_changelog_path(owner: str, repo: str) -> Optional[Path]:
     """Return the path to the existing global changelog file, or None."""
-    safe = _safe_repo_name(f"{owner}/{repo}")
+    safe = safe_repo_name(f"{owner}/{repo}")
     path = tracker.changelogs_dir() / f"GLOBAL_CHANGELOG_{safe}.md"
     return path if path.exists() else None

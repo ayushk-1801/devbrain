@@ -7,6 +7,7 @@ passed per request.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import logging
@@ -42,6 +43,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="DevBrain", version="0.1.0", lifespan=lifespan)
+
+# Keeps strong references to background tasks so the GC cannot collect them
+# mid-execution. Tasks remove themselves when done.
+_bg_tasks: set[asyncio.Task] = set()
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -178,9 +183,9 @@ async def changelog_generate(
             )
 
     if notify:
-        import asyncio
-
-        asyncio.create_task(cl_notifier.dispatch_all_users(repo, cl, user_updates_map))
+        _t = asyncio.create_task(cl_notifier.dispatch_all_users(repo, cl, user_updates_map))
+        _bg_tasks.add(_t)
+        _t.add_done_callback(_bg_tasks.discard)
 
     return {
         "repo": repo,

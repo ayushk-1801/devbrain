@@ -23,6 +23,7 @@ Generated file
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -36,11 +37,11 @@ from backend.changelog.global_changelog import (
     IssueEntry,
     PREntry,
     ReleaseEntry,
-    _fetch_commits,
-    _fetch_issues,
-    _fetch_prs,
-    _fetch_releases,
-    _safe_repo_name,
+    fetch_commits,
+    fetch_issues,
+    fetch_prs,
+    fetch_releases,
+    safe_repo_name,
 )
 from backend.changelog.profile import (
     get_file_touches_since,
@@ -370,12 +371,14 @@ async def generate_user_updates(
         all_issues = global_changelog.issues
         all_releases = global_changelog.releases
     else:
-        gh = github_client()
-        gh_repo = gh.get_repo(full_repo)
-        all_commits = _fetch_commits(gh_repo, since)
-        all_prs = _fetch_prs(gh_repo, since)
-        all_issues = _fetch_issues(gh_repo, since)
-        all_releases = _fetch_releases(gh_repo, since)
+        gh = await asyncio.to_thread(github_client)
+        gh_repo = await asyncio.to_thread(gh.get_repo, full_repo)
+        all_commits, all_prs, all_issues, all_releases = await asyncio.gather(
+            asyncio.to_thread(fetch_commits, gh_repo, since),
+            asyncio.to_thread(fetch_prs, gh_repo, since),
+            asyncio.to_thread(fetch_issues, gh_repo, since),
+            asyncio.to_thread(fetch_releases, gh_repo, since),
+        )
 
     # --- User-specific data from Redis (no GitHub API calls) ---
     my_commits = _filter_commits(all_commits, username)
@@ -411,7 +414,7 @@ async def generate_user_updates(
     )
 
     # Write the rendered Markdown file (local output artifact).
-    safe_repo = _safe_repo_name(full_repo)
+    safe_repo = safe_repo_name(full_repo)
     safe_user = username.lower().replace("-", "_")
     md_path = tracker.changelogs_dir() / f"USER_UPDATES_{safe_user}_{safe_repo}.md"
     md_path.write_text(_render_markdown(updates), encoding="utf-8")
@@ -430,7 +433,7 @@ async def generate_user_updates(
 
 def get_user_updates_path(owner: str, repo: str, username: str) -> Optional[Path]:
     """Return the path to the existing user updates file, or None."""
-    safe_repo = _safe_repo_name(f"{owner}/{repo}")
+    safe_repo = safe_repo_name(f"{owner}/{repo}")
     safe_user = username.lower().replace("-", "_")
     path = tracker.changelogs_dir() / f"USER_UPDATES_{safe_user}_{safe_repo}.md"
     return path if path.exists() else None
