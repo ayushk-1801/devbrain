@@ -105,7 +105,6 @@ async def full_sync(repo: str, sync_history_days: int | None = None) -> dict[str
         "prs": await pull_requests.ingest_prs(owner, name, since_days=sync_history_days),
         "issues": await issues.ingest_issues(owner, name, since_days=sync_history_days),
         "adrs": await adrs.ingest_adrs(owner, name),
-        "codegraph": await codegraph.ingest_codegraph(owner, name),
         "releases": await releases.ingest_all_releases(owner, name),
     }
     registry.add_repo(repo)
