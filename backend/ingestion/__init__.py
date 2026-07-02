@@ -1,5 +1,23 @@
 """GitHub data source ingestion modules."""
 
-from backend.ingestion import commits, github_client, issues, pull_requests
+from backend.ingestion import (
+    adrs,
+    codebase,
+    codegraph,
+    commits,
+    github_client,
+    issues,
+    pull_requests,
+    releases,
+)
 
-__all__ = ["commits", "github_client", "issues", "pull_requests"]
+__all__ = [
+    "adrs",
+    "codebase",
+    "codegraph",
+    "commits",
+    "github_client",
+    "issues",
+    "pull_requests",
+    "releases",
+]
