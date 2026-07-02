@@ -16,7 +16,7 @@ from arq.connections import RedisSettings
 
 from backend import registry
 from backend.config import settings, split_repo
-from backend.ingestion import adrs, codebase, commits, issues, pull_requests
+from backend.ingestion import adrs, codebase, codegraph, commits, issues, pull_requests, releases
 
 # ---------------------------------------------------------------------------
 # ARQ queue helpers
@@ -63,6 +63,20 @@ async def enqueue_pr_review_comment(repo: str, comment_id: int) -> str:
     return job.job_id
 
 
+async def enqueue_release(repo: str, tag: str) -> str:
+    queue = await get_queue()
+    job = await queue.enqueue_job("task_ingest_release", repo, tag)
+    await queue.aclose()
+    return job.job_id
+
+
+async def enqueue_pr_review(repo: str, pr_number: int, review_id: int) -> str:
+    queue = await get_queue()
+    job = await queue.enqueue_job("task_ingest_pr_review", repo, pr_number, review_id)
+    await queue.aclose()
+    return job.job_id
+
+
 async def get_job_status(job_id: str) -> dict[str, Any]:
     """Return the current status and result of a queued job."""
     from arq.jobs import Job, JobStatus
@@ -80,7 +94,7 @@ async def get_job_status(job_id: str) -> dict[str, Any]:
 
 
 async def full_sync(repo: str, sync_history_days: int | None = None) -> dict[str, Any]:
-    """Full historical sync of a repo (commits, PRs, ADRs, issues, code structure).
+    """Full historical sync of a repo (commits, PRs, issues, ADRs, code, releases).
 
     Records the repo in the registry so it participates in multi-repo listing
     and the weekly refresh. Returns per-source counts.
@@ -91,7 +105,8 @@ async def full_sync(repo: str, sync_history_days: int | None = None) -> dict[str
         "prs": await pull_requests.ingest_prs(owner, name, since_days=sync_history_days),
         "issues": await issues.ingest_issues(owner, name, since_days=sync_history_days),
         "adrs": await adrs.ingest_adrs(owner, name),
-        "ast_modules": await codebase.ingest_repo_structure(owner, name),
+        "codegraph": await codegraph.ingest_codegraph(owner, name),
+        "releases": await releases.ingest_all_releases(owner, name),
     }
     registry.add_repo(repo)
     return {"repo": repo, "ingested": counts}

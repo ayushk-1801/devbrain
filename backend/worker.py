@@ -90,6 +90,29 @@ async def task_forget_module(ctx: dict, repo: str, module: str) -> dict:
     return await deprecate_module(owner, name, module)
 
 
+async def task_ingest_release(ctx: dict, repo: str, tag: str) -> None:
+    """Ingest a single published release."""
+    from backend import service
+    from backend.config import split_repo
+    from backend.ingestion import releases as rel_mod, github_client
+    owner, name = split_repo(repo)
+    logger.info("task_ingest_release: repo=%s tag=%s", repo, tag)
+    releases = github_client.fetch_releases(owner, name)
+    for r in releases:
+        if r["tag"] == tag:
+            await rel_mod.ingest_release(owner, name, r)
+            return
+    logger.warning("release tag %s not found for %s", tag, repo)
+
+
+async def task_ingest_pr_review(ctx: dict, repo: str, pr_number: int, review_id: int) -> None:
+    """Ingest a single PR review summary."""
+    from backend import service
+    logger.info("task_ingest_pr_review: repo=%s pr=#%s review=%s", repo, pr_number, review_id)
+    # Re-ingest the full PR which now includes the review summaries
+    await service.ingest_single_pr(repo, pr_number)
+
+
 # ---------------------------------------------------------------------------
 # Graph data task
 # ---------------------------------------------------------------------------
@@ -127,6 +150,8 @@ class WorkerSettings:
         task_ingest_pr,
         task_ingest_issue,
         task_ingest_pr_review_comment,
+        task_ingest_release,
+        task_ingest_pr_review,
         task_query,
         task_refresh,
         task_forget_module,

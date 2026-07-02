@@ -16,6 +16,17 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from backend import service
+from backend.changelog import notifier as cl_notifier
+from backend.changelog import profile as cl_profile
+from backend.changelog import tracker as cl_tracker
+from backend.changelog.global_changelog import (
+    generate_global_changelog,
+    get_global_changelog_path,
+)
+from backend.changelog.user_updates import (
+    generate_user_updates,
+    get_user_updates_path,
+)
 from backend.config import settings, split_repo
 
 logging.basicConfig(level=logging.INFO)
@@ -49,6 +60,12 @@ app.add_middleware(
 class IngestRequest(BaseModel):
     repo: str
     sync_history_days: int | None = None
+
+
+class SubscribeRequest(BaseModel):
+    repo: str
+    username: str
+    notify_webhook: str | None = None  # optional webhook URL for push notifications
 
 
 # --- Routes --------------------------------------------------------------
@@ -121,6 +138,192 @@ async def graph_data() -> dict:
         raise HTTPException(status_code=500, detail=str(exc))
 
 
+# --- Changelog & user-update routes -------------------------------------
+
+
+@app.post("/changelog/generate")
+async def changelog_generate(
+    repo: str = Query(..., description="owner/repo"),
+    notify: bool = Query(False, description="Send notifications after generating"),
+) -> dict:
+    """Generate (or regenerate) the global changelog for a repo and optionally
+    notify all subscribed users.
+
+    Returns a summary JSON and writes two types of Markdown files:
+    - ``GLOBAL_CHANGELOG_{repo}.md`` — every event since the last run
+    - ``USER_UPDATES_{user}_{repo}.md`` — one per subscribed user
+    """
+    try:
+        owner, name = split_repo(repo)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    try:
+        cl, md_path = await generate_global_changelog(owner, name)
+    except Exception as exc:
+        logger.exception("Failed to generate global changelog for %s", repo)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+    user_updates_map: dict = {}
+    subscribed = await cl_tracker.list_subscribed_users(repo)
+    for username in subscribed:
+        try:
+            updates, _ = await generate_user_updates(
+                owner, name, username, global_changelog=cl
+            )
+            user_updates_map[username] = updates
+        except Exception:
+            logger.exception(
+                "Failed to generate user updates for %s on %s", username, repo
+            )
+
+    if notify:
+        import asyncio
+
+        asyncio.create_task(cl_notifier.dispatch_all_users(repo, cl, user_updates_map))
+
+    return {
+        "repo": repo,
+        "global_changelog_file": str(md_path),
+        "total_events": cl.total_events(),
+        "counts": {
+            "commits": len(cl.commits),
+            "pull_requests": len(cl.pull_requests),
+            "issues": len(cl.issues),
+            "releases": len(cl.releases),
+        },
+        "since": cl.since.isoformat() if cl.since else None,
+        "generated_at": cl.generated_at.isoformat(),
+        "users_notified": list(user_updates_map.keys()),
+    }
+
+
+@app.get("/changelog")
+async def changelog_read(
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    """Read the latest global changelog for a repo.
+
+    Returns the raw Markdown content plus metadata.  Generate it first with
+    ``POST /changelog/generate`` if it does not exist yet.
+    """
+    try:
+        owner, name = split_repo(repo)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    path = get_global_changelog_path(owner, name)
+    if not path:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No changelog found for {repo}. Run POST /changelog/generate first.",
+        )
+
+    content = path.read_text(encoding="utf-8")
+    last_sync = await cl_tracker.get_last_global_sync(repo)
+    return {
+        "repo": repo,
+        "file": str(path),
+        "last_generated": last_sync.isoformat() if last_sync else None,
+        "content": content,
+    }
+
+
+@app.get("/changelog/user/{username}")
+async def changelog_user(
+    username: str,
+    repo: str = Query(..., description="owner/repo"),
+    refresh: bool = Query(
+        False, description="Re-fetch from GitHub instead of reading cached file"
+    ),
+) -> dict:
+    """Return the update digest for a specific user.
+
+    By default returns the cached Markdown file.  Pass ``?refresh=true`` to
+    re-generate it from GitHub and update the user's watermark.
+    """
+    try:
+        owner, name = split_repo(repo)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    if refresh:
+        try:
+            updates, path = await generate_user_updates(owner, name, username)
+            await cl_notifier.dispatch_user(repo, username, updates)
+        except Exception as exc:
+            logger.exception(
+                "Failed to generate user updates for %s on %s", username, repo
+            )
+            raise HTTPException(status_code=500, detail=str(exc))
+    else:
+        path = get_user_updates_path(owner, name, username)
+        if not path:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f"No updates file found for @{username} on {repo}. "
+                    f"Run GET /changelog/user/{username}?repo={repo}&refresh=true to generate."
+                ),
+            )
+
+    content = path.read_text(encoding="utf-8")
+    last_seen = await cl_tracker.get_last_user_seen(repo, username)
+    return {
+        "repo": repo,
+        "username": username,
+        "file": str(path),
+        "last_generated": last_seen.isoformat() if last_seen else None,
+        "content": content,
+    }
+
+
+@app.post("/changelog/subscribe")
+async def changelog_subscribe(req: SubscribeRequest) -> dict:
+    """Register a user to receive update digests for a repo.
+
+    Optionally provide a ``notify_webhook`` URL — DevBrain will POST a JSON
+    summary there every time ``POST /changelog/generate?notify=true`` is called.
+    """
+    try:
+        split_repo(req.repo)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    # Registering the user without a webhook is valid (they can poll the API).
+    if req.notify_webhook:
+        await cl_tracker.set_user_webhook(req.repo, req.username, req.notify_webhook)
+    else:
+        # Touch the user entry so they appear in list_subscribed_users().
+        from datetime import datetime, timezone
+
+        existing = await cl_tracker.get_last_user_seen(req.repo, req.username)
+        await cl_tracker.set_last_user_seen(
+            req.repo, req.username, existing or datetime.now(timezone.utc)
+        )
+
+    return {
+        "status": "subscribed",
+        "repo": req.repo,
+        "username": req.username,
+        "webhook_registered": bool(req.notify_webhook),
+    }
+
+
+@app.get("/changelog/subscribers")
+async def changelog_subscribers(
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    """List all users subscribed to changelog updates for a repo."""
+    try:
+        split_repo(repo)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    users = await cl_tracker.list_subscribed_users(repo)
+    return {"repo": repo, "subscribers": users}
+
+
 # --- Webhook -------------------------------------------------------------
 
 
@@ -138,6 +341,13 @@ def _verify_signature(body: bytes, signature: str | None) -> bool:
 
 async def _handle_push(repo: str, payload: dict) -> None:
     """Enqueue incremental ingest for each pushed commit."""
+    # Update user profiles from the push payload (zero extra API calls —
+    # the payload already contains message, author, and changed file lists).
+    try:
+        await cl_profile.update_from_push(repo, payload)
+    except Exception:
+        logger.exception("profile update failed for push on %s", repo)
+
     for commit_ref in payload.get("commits", []):
         sha = commit_ref.get("id")
         if not sha:
@@ -157,6 +367,16 @@ async def _handle_pull_request(repo: str, payload: dict) -> None:
         return
     if action == "closed" and not pr.get("merged"):
         return
+
+    # Scan PR body for @mentions on open and edit only (not every sync).
+    if action in ("opened", "edited"):
+        try:
+            await cl_profile.update_from_pull_request(repo, payload)
+        except Exception:
+            logger.exception(
+                "profile update failed for PR #%s on %s", pr.get("number"), repo
+            )
+
     try:
         job_id = await service.enqueue_single_pr(repo, pr["number"])
         logger.info("enqueued PR #%s → job %s", pr["number"], job_id)
@@ -169,6 +389,16 @@ async def _handle_issue(repo: str, payload: dict) -> None:
     if payload.get("action") not in ("opened", "labeled", "closed"):
         return
     issue = payload.get("issue", {})
+
+    # Scan issue body for @mentions when opened.
+    if payload.get("action") == "opened":
+        try:
+            await cl_profile.update_from_issue(repo, payload)
+        except Exception:
+            logger.exception(
+                "profile update failed for issue #%s on %s", issue.get("number"), repo
+            )
+
     try:
         job_id = await service.enqueue_single_issue(repo, issue["number"])
         logger.info("enqueued issue #%s → job %s", issue["number"], job_id)
@@ -181,6 +411,17 @@ async def _handle_pr_review_comment(repo: str, payload: dict) -> None:
     if payload.get("action") != "created":
         return
     comment = payload.get("comment", {})
+
+    # Scan inline comment body for @mentions.
+    try:
+        await cl_profile.update_from_pr_review_comment(repo, payload)
+    except Exception:
+        logger.exception(
+            "profile update failed for review comment #%s on %s",
+            comment.get("id"),
+            repo,
+        )
+
     try:
         job_id = await service.enqueue_pr_review_comment(repo, comment["id"])
         logger.info("enqueued review comment %s → job %s", comment["id"], job_id)
@@ -188,11 +429,47 @@ async def _handle_pr_review_comment(repo: str, payload: dict) -> None:
         logger.exception("failed to enqueue PR review comment #%s", comment.get("id"))
 
 
+async def _handle_release(repo: str, payload: dict) -> None:
+    """Enqueue ingest when a release is published."""
+    if payload.get("action") != "published":
+        return
+    try:
+        owner, _ = repo.split("/", 1)
+        from backend.ingestion import releases as rel_mod
+
+        release = payload.get("release", {})
+        tag = release.get("tag_name", "")
+        await service.enqueue_release(repo, tag)
+        logger.info("enqueued release %s for %s", tag, repo)
+    except Exception:
+        logger.exception("failed to enqueue release for %s", repo)
+
+
+async def _handle_pull_request_review(repo: str, payload: dict) -> None:
+    """Enqueue ingest of a PR review summary."""
+    # Record the reviewer and scan the review body for @mentions.
+    try:
+        await cl_profile.update_from_pr_review(repo, payload)
+    except Exception:
+        logger.exception("profile update failed for PR review on %s", repo)
+
+    try:
+        pr_number = payload.get("pull_request", {}).get("number")
+        review_id = payload.get("review", {}).get("id")
+        if pr_number and review_id:
+            await service.enqueue_pr_review(repo, pr_number, review_id)
+            logger.info("enqueued PR review %s for PR #%s", review_id, pr_number)
+    except Exception:
+        logger.exception("failed to enqueue PR review for %s", repo)
+
+
 _WEBHOOK_DISPATCH = {
     "push": _handle_push,
     "pull_request": _handle_pull_request,
     "issues": _handle_issue,
     "pull_request_review_comment": _handle_pr_review_comment,
+    "release": _handle_release,
+    "pull_request_review": _handle_pull_request_review,
 }
 
 
