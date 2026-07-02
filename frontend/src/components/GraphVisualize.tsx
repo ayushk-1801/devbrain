@@ -75,7 +75,6 @@ const NODE_ICONS: Record<string, typeof GitCommit> = {
   Function: Code,
   Class: Layers,
   Issue: AlertTriangle,
-  Entity: Tag,
 };
 
 function getNodeColor(type: string): string {
@@ -987,17 +986,19 @@ export default function GraphVisualize() {
               }}
             >
               <div className="flex items-start gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{
-                    background: `color-mix(in srgb, ${getNodeColor(selectedNode.type)} 25%, var(--color-bg))`,
-                  }}
-                >
-                  {(() => {
-                    const Icon = NODE_ICONS[selectedNode.type];
-                    return Icon ? <Icon size={18} style={{ color: getNodeColor(selectedNode.type) }} /> : <Tag size={18} className="text-text-muted" />;
-                  })()}
-                </div>
+                {NODE_ICONS[selectedNode.type] && (
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{
+                      background: `color-mix(in srgb, ${getNodeColor(selectedNode.type)} 25%, var(--color-bg))`,
+                    }}
+                  >
+                    {(() => {
+                      const Icon = NODE_ICONS[selectedNode.type];
+                      return Icon ? <Icon size={18} style={{ color: getNodeColor(selectedNode.type) }} /> : null;
+                    })()}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span
