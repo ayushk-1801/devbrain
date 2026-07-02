@@ -32,11 +32,11 @@ export function Hero() {
           into a permanently queryable knowledge graph. Stop guessing why
           code exists - get sourced answers in seconds.
         </p>
-        <div className="flex flex-row items-center gap-4 mt-10">
-          <button className="bg-btn-dark text-btn-dark-text font-mono text-[14px] md:text-[15px] font-medium px-6 py-[14px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer hover:bg-[#3a3836]">
+         <div className="flex flex-row items-center gap-4 mt-10">
+          <button className="bg-btn-dark text-btn-dark-text text-[14px] md:text-[15px] font-medium px-6 py-[14px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer hover:bg-[#3a3836]">
             Explore the graph
           </button>
-          <button className="bg-transparent border-[1.5px] border-border text-text-primary font-mono text-[14px] md:text-[15px] font-medium px-6 py-[14px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer hover:bg-bg-secondary">
+          <button className="bg-transparent border-[1.5px] border-border text-text-primary text-[14px] md:text-[15px] font-medium px-6 py-[14px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer hover:bg-bg-secondary">
             Read the docs
           </button>
         </div>

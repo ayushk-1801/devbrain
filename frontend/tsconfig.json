@@ -18,6 +18,9 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "collections/*": [
+        "./.source/*"
       ]
     },
     "allowImportingTsExtensions": true,

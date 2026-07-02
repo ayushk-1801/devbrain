@@ -73,19 +73,22 @@ export function Navbar() {
         {/* Center - desktop only */}
         {isVisualizePage ? (
           <div className="hidden md:flex items-center gap-6">
-            <Link to="/" className="font-mono text-[14px] md:text-[15px] font-medium text-text-primary hover:underline underline-offset-4 decoration-1">
+            <Link to="/" className="text-[14px] md:text-[15px] font-medium text-text-primary hover:underline underline-offset-4 decoration-1">
               ← Home
             </Link>
           </div>
         ) : (
           <div className="hidden md:flex items-center gap-6">
             {['About', 'Features', 'Use Cases'].map(item => (
-              <a key={item} href={`#${item.toLowerCase().replace(/ /g, '-')}`} className="font-mono text-[14px] md:text-[15px] font-medium text-text-primary hover:underline underline-offset-4 decoration-1">
+              <a key={item} href={`#${item.toLowerCase().replace(/ /g, '-')}`} className="text-[14px] md:text-[15px] font-medium text-text-primary hover:underline underline-offset-4 decoration-1">
                 {item}
               </a>
             ))}
-            <Link to="/visualize" className="font-mono text-[14px] md:text-[15px] font-medium text-text-primary hover:underline underline-offset-4 decoration-1">
+            <Link to="/visualize" className="text-[14px] md:text-[15px] font-medium text-text-primary hover:underline underline-offset-4 decoration-1">
               Visualize
+            </Link>
+            <Link to="/docs" className="text-[14px] md:text-[15px] font-medium text-text-primary hover:underline underline-offset-4 decoration-1">
+              Docs
             </Link>
           </div>
         )}
@@ -102,7 +105,7 @@ export function Navbar() {
           <a href="https://github.com/ayushk-1801/devbrain" target="_blank" rel="noopener noreferrer" aria-label="GitHub Repository" className="flex items-center gap-2 text-text-muted hover:text-text-primary transition-colors">
             <Github size={20} />
           </a>
-          <button className="hidden md:block bg-bg-secondary border-[1.5px] border-border text-text-primary font-mono text-[14px] font-medium px-4 py-1.5 rounded-full cursor-pointer hover:bg-text-primary hover:text-bg hover:border-text-primary transition-colors duration-200">
+          <button className="hidden md:block bg-bg-secondary border-[1.5px] border-border text-text-primary text-[14px] font-medium px-4 py-1.5 rounded-full cursor-pointer hover:bg-text-primary hover:text-bg hover:border-text-primary transition-colors duration-200">
             Get Started
           </button>
         </div>

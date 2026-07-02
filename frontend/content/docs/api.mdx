@@ -1,0 +1,52 @@
+---
+title: REST API Reference
+description: Reference documentation for the DevBrain backend REST API and endpoints.
+---
+
+# REST API Reference
+
+The DevBrain server runs a FastAPI application that serves endpoints for ingestion, natural language queries, module management, and changelog/profile generation.
+
+## Key Endpoints
+
+### 1. Trigger Full Ingestion
+Initiate a historical sync of a repository. This fetches commits, pull requests, AST codebase structures, and ADRs.
+
+- **URL:** `/ingest`
+- **Method:** `POST`
+- **Payload:**
+  ```json
+  {
+    "repo": "owner/repo-name",
+    "sync_history_days": 90
+  }
+  ```
+
+---
+
+### 2. Natural Language Query (Recall)
+Query the hybrid memory layer (Graph + Vector) of a specific repository.
+
+- **URL:** `/query`
+- **Method:** `GET`
+- **Parameters:**
+  - `q` (string, required): The natural language query (e.g., `why was the auth module refactored?`)
+  - `repo` (string, required): The target repository (e.g., `owner/repo-name`)
+
+---
+
+### 3. GitHub Webhook Receiver
+Endpoint registered with GitHub webhooks to listen for push and pull request events. It triggers incremental ingestion of changed files on the fly.
+
+- **URL:** `/webhook/github`
+- **Method:** `POST`
+- **Headers:** Includes signature verification headers.
+
+---
+
+### 4. Surgical Module Pruning (Forget)
+Delete a deprecated or replaced module from the knowledge graph.
+
+- **URL:** `/module/{repo}/{module}`
+- **Method:** `DELETE`
+- **Description:** Deletes the specific module and its subnodes/edges cleanly, leaving the rest of the graph intact.

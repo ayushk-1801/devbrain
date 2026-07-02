@@ -112,7 +112,7 @@ export function Features() {
             >
               <Icon size={24} className={isActive ? 'text-text-primary' : 'text-text-inactive group-hover:text-text-muted transition-colors'} />
               <div className="flex flex-col items-center">
-                <span className={`font-mono text-[14px] ${isActive ? 'text-text-primary font-bold' : 'text-text-inactive group-hover:text-text-muted transition-colors'}`}>
+                <span className={`text-[14px] ${isActive ? 'text-text-primary font-bold' : 'text-text-inactive group-hover:text-text-muted transition-colors'}`}>
                   {tab.label}
                 </span>
                 

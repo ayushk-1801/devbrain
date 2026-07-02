@@ -1,6 +1,7 @@
 import { motion, useScroll, useTransform } from 'motion/react';
 import { Cpu, Database, Code2, GitBranch, Sparkles } from 'lucide-react';
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const benefits = [
   {
@@ -144,7 +145,7 @@ export function Benefits() {
           })}
 
           {/* Desktop View Docs Button (placed absolutely below Card 0 and left-aligned) */}
-          <motion.div
+          <motion.div 
             style={{
               position: 'absolute',
               top: 490, // 192 (yOffset of Card 0) + 274 (card height estimate) + 24 (gap)
@@ -155,9 +156,9 @@ export function Benefits() {
             }}
             className="hidden lg:flex w-[480px] justify-start"
           >
-            <button className="bg-btn-dark text-btn-dark-text font-mono text-[14px] md:text-[15px] font-medium px-8 py-[16px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer hover:bg-[#3a3836]">
+            <Link to="/docs" className="bg-btn-dark text-btn-dark-text text-[14px] md:text-[15px] font-medium px-8 py-[16px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer hover:bg-[#3a3836] inline-block text-center">
               View Docs
-            </button>
+            </Link>
           </motion.div>
         </div>
 
@@ -200,9 +201,9 @@ export function Benefits() {
           transition={{ duration: 0.5, ease: "easeOut", delay: 0.3 }}
           className="mt-16 md:mt-12 lg:hidden relative z-10 flex justify-center w-full"
         >
-          <button className="bg-btn-dark text-btn-dark-text font-mono text-[14px] md:text-[15px] font-medium px-8 py-[16px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer hover:bg-[#3a3836]">
+          <Link to="/docs" className="bg-btn-dark text-btn-dark-text text-[14px] md:text-[15px] font-medium px-8 py-[16px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer hover:bg-[#3a3836] inline-block text-center">
             view docs
-          </button>
+          </Link>
         </motion.div>
       </div>
     </section>
