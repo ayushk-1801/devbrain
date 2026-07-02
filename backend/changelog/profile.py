@@ -72,13 +72,23 @@ def _context_snippet(text: str, username: str) -> str:
 # ---------------------------------------------------------------------------
 
 _pool: Optional[aioredis.Redis] = None
+_pool_lock: asyncio.Lock | None = None
 _PFX = "devbrain:pr"
+
+
+def _get_lock() -> asyncio.Lock:
+    global _pool_lock
+    if _pool_lock is None:
+        _pool_lock = asyncio.Lock()
+    return _pool_lock
 
 
 async def _redis() -> aioredis.Redis:
     global _pool
     if _pool is None:
-        _pool = await aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+        async with _get_lock():
+            if _pool is None:  # re-check inside the lock
+                _pool = await aioredis.from_url(settings.REDIS_URL, decode_responses=True)
     return _pool
 
 

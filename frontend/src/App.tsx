@@ -1,23 +1,14 @@
-import { Navbar } from './components/Navbar';
-import { Hero } from './components/Hero';
-import { About } from './components/About';
-import { Features } from './components/Features';
-import { UseCases } from './components/UseCases';
-import { Benefits } from './components/Benefits';
-import { Footer } from './components/Footer';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import LandingPage from './components/LandingPage';
+import GraphVisualize from './components/GraphVisualize';
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-bg selection:bg-accent-orchid selection:text-text-primary">
-      <Navbar />
-      <main>
-        <Hero />
-        <About />
-        <Features />
-        <UseCases />
-        <Benefits />
-      </main>
-      <Footer />
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/visualize" element={<GraphVisualize />} />
+      </Routes>
+    </BrowserRouter>
   );
 }

@@ -30,7 +30,7 @@ export function Hero() {
         <p className="font-display text-[16px] md:text-[18px] text-text-muted max-w-[580px] mt-6 leading-[1.7]">
           DevBrain turns every commit, pull request, and architectural decision
           into a permanently queryable knowledge graph. Stop guessing why
-          code exists — get sourced answers in seconds.
+          code exists - get sourced answers in seconds.
         </p>
         <div className="flex flex-row items-center gap-4 mt-10">
           <button className="bg-btn-dark text-btn-dark-text font-mono text-[14px] md:text-[15px] font-medium px-6 py-[14px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer hover:bg-[#3a3836]">

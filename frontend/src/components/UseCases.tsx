@@ -10,25 +10,25 @@ const tabs = [
 
 const useCaseContent: Record<string, any[]> = {
   onboarding: [
-    { icon: UserPlus, title: "New Engineer Ramp-Up", body: "A new hire asks 'why does this service exist?' DevBrain surfaces the original ADR, the founding PRs, and the first author — in seconds, not days." },
+    { icon: UserPlus, title: "New Engineer Ramp-Up", body: "A new hire asks 'why does this service exist?' DevBrain surfaces the original ADR, the founding PRs, and the first author - in seconds, not days." },
     { icon: Map, title: "Codebase Orientation", body: "Ask 'what does the payment module do and what depends on it?' Get a sourced walkthrough of the architecture from the actual history." },
     { icon: MessageSquare, title: "Silent Knowledge Transfer", body: "When a senior engineer leaves, their institutional knowledge stays in the graph. DevBrain makes offboarding a non-event." },
     { icon: BookOpen, title: "Self-Serve Documentation", body: "Junior engineers answer their own questions without interrupting seniors. Slack messages asking 'why does this exist' drop dramatically." },
     { icon: Search, title: "Context Before a PR", body: "Before touching unfamiliar code, engineers query DevBrain to understand all prior decisions affecting the module. No stepping on landmines." },
-    { icon: GitBranch, title: "Cross-Team Visibility", body: "Frontend asks 'did the API team change the auth interface?' DevBrain answers with exact commits and PR links — no cross-team Slack threads." }
+    { icon: GitBranch, title: "Cross-Team Visibility", body: "Frontend asks 'did the API team change the auth interface?' DevBrain answers with exact commits and PR links - no cross-team Slack threads." }
   ],
   review: [
     { icon: History, title: "Prior Art Check", body: "Before merging, reviewers ask DevBrain if this approach has been tried before. Avoid re-solving solved problems." },
     { icon: ShieldAlert, title: "Regression Context", body: "Surface every past bug fix touching the files in a PR. Reviewers catch regressions before they ship." },
     { icon: CheckCircle, title: "Decision Alignment", body: "Check if a PR conflicts with an existing ADR. DevBrain flags architectural drift automatically." },
-    { icon: Users, title: "Reviewer Suggestion", body: "DevBrain surfaces who last touched each changed file — built-in CODEOWNERS intelligence." },
+    { icon: Users, title: "Reviewer Suggestion", body: "DevBrain surfaces who last touched each changed file - built-in CODEOWNERS intelligence." },
     { icon: Box, title: "Scope Analysis", body: "Understand the blast radius of a change: which modules are downstream of the files this PR touches?" },
     { icon: TrendingUp, title: "Historical Velocity", body: "See how many PRs this file has had in the last 90 days. Hot files warrant extra scrutiny." }
   ],
   agents: [
     { icon: Bot, title: "MCP Native", body: "Connect Claude Code or Cursor to DevBrain via the Cognee MCP server. Agents query the graph automatically on every task." },
     { icon: Code2, title: "Grounded Code Gen", body: "AI agents generate code with full context of past decisions, not just the current file. No hallucinated solutions." },
-    { icon: AlertCircle, title: "Agentic Refactors", body: "Before an agent refactors a module, it queries what decisions govern it. Safe, compliant changes — automatically." },
+    { icon: AlertCircle, title: "Agentic Refactors", body: "Before an agent refactors a module, it queries what decisions govern it. Safe, compliant changes - automatically." },
     { icon: PenTool, title: "PR Drafting", body: "Agents write PR descriptions that reference the ADRs and prior commits their changes relate to. Automatic context." },
     { icon: Lock, title: "Regression Prevention", body: "Agents check the graph before changing a function: 'has this been reverted before and why?' Ghost bugs stay buried." },
     { icon: Navigation, title: "Multi-hop Reasoning", body: "Agents traverse: function → module → PR → ADR → decision. Answer 'why does this code exist' in a single graph walk." }
@@ -62,16 +62,18 @@ export function UseCases() {
       <div className="flex flex-row justify-center gap-3 mt-12 mb-16">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
-          const activeBg = tabColors[tab.id];
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              style={isActive ? { backgroundColor: activeBg } : {}}
-              className={`font-mono text-[14px] px-[24px] py-[10px] rounded-full border-[1.5px] border-border transition-colors cursor-pointer ${
+              className={`font-mono text-[14px] px-[24px] py-[10px] rounded-full border-[1.5px] transition-colors cursor-pointer ${
                 isActive 
-                  ? 'text-text-primary font-bold' 
-                  : 'bg-transparent text-text-primary hover:bg-bg-secondary'
+                  ? 'border-border text-[#040200] font-bold ' + (
+                      tab.id === 'onboarding' ? 'bg-accent-mint'
+                        : tab.id === 'review' ? 'bg-accent-powder'
+                        : 'bg-accent-blush'
+                    )
+                  : 'border-text-muted bg-transparent text-text-muted hover:bg-bg-secondary'
               }`}
             >
               {tab.label}
@@ -93,18 +95,20 @@ export function UseCases() {
           >
             {useCaseContent[activeTab].map((card, idx) => {
               const Icon = card.icon;
-              const cardBg = tabColors[activeTab];
               return (
                 <div 
                   key={idx}
-                  style={{ backgroundColor: cardBg }}
-                  className="rounded-[24px] p-[40px] md:p-[48px] flex flex-col hover:-translate-y-[4px] hover:shadow-[0_12px_40px_rgba(4,2,0,0.08)] transition-all duration-300 border border-border/10"
+                  className={`rounded-[24px] p-[40px] md:p-[48px] flex flex-col transition-all duration-300 border border-border/10 ${
+                    activeTab === 'onboarding' ? 'bg-accent-mint'
+                      : activeTab === 'review' ? 'bg-accent-powder'
+                      : 'bg-accent-blush'
+                  }`}
                 >
-                  <Icon size={32} className="text-text-primary mb-6" />
-                  <h3 className="font-display text-[20px] md:text-[22px] font-bold text-text-primary mb-3 leading-tight tracking-tight">
+                  <Icon size={32} className="text-[#040200] mb-6" />
+                  <h3 className="font-display text-[20px] md:text-[22px] font-bold text-[#040200] mb-3 leading-tight tracking-tight">
                     {card.title}
                   </h3>
-                  <p className="font-display text-[15px] md:text-[16px] text-text-muted leading-[1.6]">
+                  <p className="font-display text-[15px] md:text-[16px] text-[#6B6A5E] leading-[1.6]">
                     {card.body}
                   </p>
                 </div>

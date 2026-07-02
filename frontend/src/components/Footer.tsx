@@ -1,6 +1,89 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'motion/react';
+import { Logo } from './ui/Logo';
+
+const VIEWBOX_WIDTH = 1410;
+
+function SiteFooterInteractiveLogotype() {
+  const shouldReduceMotion = useReducedMotion();
+
+  const gradientX1Raw = useMotionValue(0.5);
+  const gradientX1 = useSpring(
+    useTransform(gradientX1Raw, [0, 1], [0, VIEWBOX_WIDTH]),
+    {
+      stiffness: 150,
+      damping: 25,
+    }
+  );
+
+  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (shouldReduceMotion) return;
+
+    const containerRect = event.currentTarget.getBoundingClientRect();
+    gradientX1Raw.set(
+      (event.clientX - containerRect.left) / containerRect.width
+    );
+  };
+
+  const handleMouseLeave = () => {
+    if (shouldReduceMotion) return;
+    gradientX1Raw.set(0.5);
+  };
+
+  return (
+    <div className="relative w-full">
+      <div
+        className="overflow-hidden"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      >
+        <div className="flex w-full translate-y-[20%] items-center justify-center">
+          <svg
+            className="w-full max-w-[1410px] h-auto"
+            viewBox="0 0 1410 258"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              fillRule="evenodd"
+              clipRule="evenodd"
+              d="M1 1H97V33H33V225H97V257H1V1ZM129 193V225H97V193H129ZM129 65H161V193H129V65ZM129 65V33H97V65H129ZM193 65H353V161H225V225H353V257H193V65ZM225 97H321V129H225V97ZM385 65H417V193H449V225H481V193H513V65H545V193H513V225H481V257H449V225H417V193H385V65ZM577 1H705V33H737V113H705V145H737V225H705V257H577V1ZM609 33H705V113H609V33ZM609 145H705V225H609V145ZM769 65H929V129H897V97H801V257H769V65ZM993 65H1121V257H1089V225H1057V193H1089V97H993V65ZM993 225H961V97H993V225ZM993 225V257H1057V225H993ZM1185 1H1217V33H1185V1ZM1249 65H1377V97H1281V257H1249V65ZM1377 97H1409V257H1377V97Z"
+              fill="url(#paint0_linear_1145_73)"
+            />
+            <path
+              d="M1153 65V97H1185V257H1217V65H1153Z"
+              fill="url(#paint0_linear_1145_73)"
+            />
+            <path
+              stroke="var(--color-text-primary)"
+              strokeOpacity={0.1}
+              d="M97 33V1H1V257H97V225M97 33H33V225H97M97 33H129V65M97 33V65H129M97 225H129V193M97 225V193H129M129 193H161V65H129M129 193V65M193 65H353V161H225V225H353V257H193V65ZM225 97H321V129H225V97ZM385 65H417V193H449V225H481V193H513V65H545V193H513V225H481V257H449V225H417V193H385V65ZM577 1H705V33H737V113H705V145H737V225H705V257H577V1ZM609 33H705V113H609V33ZM609 145H705V225H609V145ZM769 65H929V129H897V97H801V257H769V65ZM1057 225H1089V257H1121V65H993V97M1057 225V193H1089V97H993M1057 225V257H993V225M1057 225H993M993 97H961V225H993M993 97V225M1185 1H1217V33H1185V1ZM1153 65V97H1185V257H1217V65H1153ZM1377 97V65H1249V257H1281V97H1377ZM1377 97H1409V257H1377V97Z"
+              strokeWidth="2"
+            />
+            <defs>
+              <motion.linearGradient
+                id="paint0_linear_1145_73"
+                x1={gradientX1}
+                y1="1"
+                x2="705"
+                y2="350"
+                gradientUnits="userSpaceOnUse"
+              >
+                <stop
+                  offset="0.625"
+                  stopColor="var(--color-text-primary)"
+                  stopOpacity="0"
+                />
+                <stop offset="1" stopColor="var(--color-text-primary)" />
+              </motion.linearGradient>
+            </defs>
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function Footer() {
   const [copied, setCopied] = useState(false);
@@ -13,34 +96,44 @@ export function Footer() {
 
   return (
     <footer 
-      style={{
-        background: 'radial-gradient(circle at 10% 20%, rgba(216, 240, 228, 0.25) 0%, transparent 60%), radial-gradient(circle at 90% 80%, rgba(255, 221, 248, 0.25) 0%, transparent 60%)'
-      }}
       className="w-full flex flex-col mt-20 relative bg-bg"
     >
-      {/* Top Wave */}
-      <div className="w-full overflow-hidden h-[120px] absolute top-0 left-0 right-0 transform -translate-y-[119px] pointer-events-none">
-        <svg viewBox="0 0 1440 120" preserveAspectRatio="none" className="w-full h-full">
+      {/* Top Ribbon Wave */}
+      <div className="w-full h-[160px] absolute top-0 left-0 right-0 transform -translate-y-[159px] pointer-events-none">
+        <svg viewBox="0 0 1440 160" preserveAspectRatio="none" className="w-full h-full">
           <defs>
             <linearGradient id="wave-top" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="var(--color-accent-mint)" />
-              <stop offset="35%" stopColor="var(--color-accent-mint)" stopOpacity="0" />
-              <stop offset="65%" stopColor="var(--color-accent-peach)" stopOpacity="0" />
-              <stop offset="100%" stopColor="var(--color-accent-peach)" />
+              <stop offset="50%" stopColor="var(--color-accent-yellow)" />
+              <stop offset="100%" stopColor="var(--color-accent-sage)" />
             </linearGradient>
+            <filter id="glow-filter" filterUnits="userSpaceOnUse" x="0" y="0" width="1440" height="160">
+              <feGaussianBlur stdDeviation="3" />
+            </filter>
           </defs>
-          <path d="M0,60 C360,120 360,0 720,60 C1080,120 1080,0 1440,60 L1440,120 L0,120 Z" fill="url(#wave-top)" fillOpacity="0.5" />
-          <path d="M0,60 C360,120 360,0 720,60 C1080,120 1080,0 1440,60" fill="none" stroke="var(--color-text-primary)" strokeWidth="1" />
+          {/* Blurred Glowing Ribbon */}
+          <path 
+            d="M 0 50 L 300 50 C 380 50, 420 120, 500 120 L 940 120 C 1020 120, 1060 50, 1140 50 L 1440 50" 
+            fill="none" 
+            stroke="url(#wave-top)" 
+            strokeWidth="40" 
+            strokeOpacity="0.85" 
+            filter="url(#glow-filter)" 
+          />
+          {/* Crisp 1px Overlay Line */}
+          <path 
+            d="M 0 50 L 300 50 C 380 50, 420 120, 500 120 L 940 120 C 1020 120, 1060 50, 1140 50 L 1440 50" 
+            fill="none" 
+            stroke="#040200" 
+            strokeWidth="1.2" 
+            strokeOpacity="0.8"
+          />
         </svg>
       </div>
 
       {/* CTA Content */}
       <div className="w-full flex flex-col items-center justify-center pt-8 pb-16 px-6 z-10 bg-transparent">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-primary mb-8">
-          <circle cx="8" cy="12" r="4" />
-          <circle cx="16" cy="12" r="4" />
-          <line x1="12" y1="12" x2="16" y2="12" />
-        </svg>
+        <Logo className="h-6 w-auto text-text-primary mb-8" />
 
         <h2 className="font-display text-[40px] md:text-[56px] font-black text-text-primary leading-[1.1] max-w-[720px] text-center tracking-tight">
           Build AI agents that actually<br />understand your codebase.
@@ -66,21 +159,41 @@ export function Footer() {
         </div>
       </div>
 
-      {/* Bottom Wave */}
-      <div className="w-full overflow-hidden h-[120px] pointer-events-none">
-        <svg viewBox="0 0 1440 120" preserveAspectRatio="none" className="w-full h-full">
+      {/* Bottom Ribbon Wave */}
+      <div className="w-full h-[160px] pointer-events-none">
+        <svg viewBox="0 0 1440 160" preserveAspectRatio="none" className="w-full h-full">
           <defs>
             <linearGradient id="wave-bot" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="var(--color-accent-sage)" />
-              <stop offset="35%" stopColor="var(--color-accent-sage)" stopOpacity="0" />
-              <stop offset="65%" stopColor="var(--color-accent-orchid)" stopOpacity="0" />
+              <stop offset="0%" stopColor="var(--color-accent-blush)" />
+              <stop offset="50%" stopColor="var(--color-accent-peach)" />
               <stop offset="100%" stopColor="var(--color-accent-orchid)" />
             </linearGradient>
+            <filter id="glow-filter-bot" filterUnits="userSpaceOnUse" x="0" y="0" width="1440" height="160">
+              <feGaussianBlur stdDeviation="3" />
+            </filter>
           </defs>
-          <path d="M0,60 C360,0 360,120 720,60 C1080,0 1080,120 1440,60 L1440,0 L0,0 Z" fill="url(#wave-bot)" fillOpacity="0.5" />
-          <path d="M0,60 C360,0 360,120 720,60 C1080,0 1080,120 1440,60" fill="none" stroke="var(--color-text-primary)" strokeWidth="1" />
+          {/* Blurred Glowing Ribbon */}
+          <path 
+            d="M 0 110 L 300 110 C 380 110, 420 40, 500 40 L 940 40 C 1020 40, 1060 110, 1140 110 L 1440 110" 
+            fill="none" 
+            stroke="url(#wave-bot)" 
+            strokeWidth="40" 
+            strokeOpacity="0.85" 
+            filter="url(#glow-filter-bot)" 
+          />
+          {/* Crisp 1px Overlay Line */}
+          <path 
+            d="M 0 110 L 300 110 C 380 110, 420 40, 500 40 L 940 40 C 1020 40, 1060 110, 1140 110 L 1440 110" 
+            fill="none" 
+            stroke="#040200" 
+            strokeWidth="1.2" 
+            strokeOpacity="0.8"
+          />
         </svg>
       </div>
+
+      {/* Interactive Logotype */}
+      <SiteFooterInteractiveLogotype />
 
       {/* Footer Bar */}
       <div className="w-full border-t border-[rgba(4,2,0,0.1)] px-[24px] md:px-[48px] py-[24px] flex flex-col md:flex-row items-center justify-between gap-4">
@@ -89,7 +202,7 @@ export function Footer() {
         </div>
         <div className="flex items-center gap-[24px]">
           <a href="#" className="font-mono text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">Terms</a>
-          <a href="#" className="font-mono text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">GitHub</a>
+          <a href="https://github.com/ayushk-1801/devbrain" className="font-mono text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">GitHub</a>
           <a href="#" className="font-mono text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">Docs</a>
         </div>
       </div>

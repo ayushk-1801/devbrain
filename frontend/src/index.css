@@ -51,6 +51,18 @@
     --content-max-width: 1400px;
   }
   
+  .dark {
+    --color-bg: #0C0B08;
+    --color-bg-secondary: #141310;
+    --color-bg-card: #1C1A15;
+    --color-text-primary: #F6F6EB;
+    --color-text-muted: #9C9A8E;
+    --color-text-inactive: #5C5A52;
+    --color-btn-dark: #F6F6EB;
+    --color-btn-dark-text: #0C0B08;
+    --color-border: #444238;
+  }
+  
   body {
     background-color: var(--color-bg);
     color: var(--color-text-primary);

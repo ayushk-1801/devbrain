@@ -182,3 +182,12 @@ async def refresh(repo: str | None = None) -> dict[str, Any]:
     result = await job.result(timeout=300)
     await queue.aclose()
     return result
+
+
+async def get_graph_data() -> dict[str, Any]:
+    """Fetch the full knowledge graph (nodes + edges) via the worker."""
+    queue = await get_queue()
+    job = await queue.enqueue_job("task_get_graph_data")
+    result = await job.result(timeout=60)
+    await queue.aclose()
+    return result
