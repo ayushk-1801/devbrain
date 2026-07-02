@@ -108,11 +108,11 @@ export function Features() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className="group flex flex-col items-center gap-3 relative min-w-[120px] snap-center cursor-pointer pb-3"
+              className="group flex flex-col items-center gap-2 sm:gap-3 relative min-w-[80px] sm:min-w-[120px] snap-center cursor-pointer pb-2 sm:pb-3"
             >
-              <Icon size={24} className={isActive ? 'text-text-primary' : 'text-text-inactive group-hover:text-text-muted transition-colors'} />
+              <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${isActive ? 'text-text-primary' : 'text-text-inactive group-hover:text-text-muted transition-colors'}`} />
               <div className="flex flex-col items-center">
-                <span className={`text-[14px] ${isActive ? 'text-text-primary font-bold' : 'text-text-inactive group-hover:text-text-muted transition-colors'}`}>
+                <span className={`text-[12px] sm:text-[14px] ${isActive ? 'text-text-primary font-bold' : 'text-text-inactive group-hover:text-text-muted transition-colors'}`}>
                   {tab.label}
                 </span>
                 
