@@ -120,21 +120,45 @@ def _register_key_rotation() -> None:
     cycle = itertools.cycle(pool)
     next(cycle)  # advance past the initial key (already set in env)
 
-    def _on_failure(kwargs, exception, start_time, end_time):  # noqa: ANN001
-        status = getattr(exception, "status_code", None)
-        if status != 429:
-            return
-        new_key = next(cycle)
-        os.environ["GEMINI_API_KEY"] = new_key
-        os.environ["LLM_API_KEY"] = new_key
-        os.environ["EMBEDDING_API_KEY"] = new_key
-        logger.warning("Gemini 429 — rotated to next API key")
+    try:
+        from litellm.integrations.custom_logger import CustomLogger
+    except ImportError:
+        class CustomLogger:
+            pass
+
+    class KeyRotationHandler(CustomLogger):
+        def rotate_key(self, exception):
+            status = getattr(exception, "status_code", None)
+            is_429 = (status == 429) or ("RateLimitError" in str(type(exception)))
+            logger.warning(f"LITELLM CALLBACK LOG FAILURE: status={status}, exception={type(exception)}, is_429={is_429}")
+            if not is_429:
+                return
+            new_key = next(cycle)
+            os.environ["GEMINI_API_KEY"] = new_key
+            os.environ["LLM_API_KEY"] = new_key
+            os.environ["EMBEDDING_API_KEY"] = new_key
+            try:
+                import cognee
+                cognee.config.set_llm_api_key(new_key)
+            except Exception:
+                pass
+            logger.warning(f"Gemini 429 — rotated to next API key: {new_key[:6]}...")
+
+        def log_failure_event(self, kwargs, completion_response, start_time, end_time):
+            self.rotate_key(kwargs.get("exception"))
+
+        async def async_log_failure_event(self, kwargs, completion_response, start_time, end_time):
+            self.rotate_key(kwargs.get("exception"))
 
     try:
         import litellm
+        litellm.set_verbose = True
 
-        if _on_failure not in litellm.failure_callback:
-            litellm.failure_callback.append(_on_failure)
+        handler = KeyRotationHandler()
+        # Find if a KeyRotationHandler is already in callbacks to prevent duplicates
+        has_handler = any(isinstance(c, KeyRotationHandler) for c in litellm.callbacks)
+        if not has_handler:
+            litellm.callbacks.append(handler)
     except Exception:
         pass  # litellm not yet importable at config load time in some envs
 
