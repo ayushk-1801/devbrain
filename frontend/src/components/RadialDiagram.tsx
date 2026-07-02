@@ -66,12 +66,12 @@ export function RadialDiagram() {
         <circle cx="530" cy="300" r="4" fill="var(--color-border)" />
 
         {/* Arc Labels */}
-        <g transform="translate(100, 200)" className="font-mono text-[11px]" textAnchor="middle" dominantBaseline="middle">
+        <g transform="translate(100, 200)" className="font-display text-[11px]" textAnchor="middle" dominantBaseline="middle">
           <rect x="-55" y="-12" width="110" height="24" rx="12" fill="var(--color-accent-sage)" fillOpacity="0.25" stroke="var(--color-border)" strokeWidth="1" strokeDasharray="3 3" />
           <text y="1.5" fill="var(--color-text-primary)">Ingestion Layer</text>
         </g>
 
-        <g transform="translate(700, 200)" className="font-mono text-[11px]" textAnchor="middle" dominantBaseline="middle">
+        <g transform="translate(700, 200)" className="font-display text-[11px]" textAnchor="middle" dominantBaseline="middle">
           <rect x="-50" y="-12" width="100" height="24" rx="12" fill="var(--color-accent-peach)" fillOpacity="0.25" stroke="var(--color-border)" strokeWidth="1" strokeDasharray="3 3" />
           <text y="1.5" fill="var(--color-text-primary)">Recall Layer</text>
         </g>
@@ -104,7 +104,7 @@ export function RadialDiagram() {
               x={n.x + Math.cos(n.angle) * 32} 
               y={n.y + Math.sin(n.angle) * 32 + (n.name === 'Function' || n.name === 'ADR' ? -22 : 0)} 
               fill="var(--color-text-primary)" 
-              className="font-mono text-[12px]" 
+              className="font-display text-[12px]" 
               textAnchor={Math.cos(n.angle) > 0.1 ? "start" : Math.cos(n.angle) < -0.1 ? "end" : "middle"}
               dominantBaseline={Math.sin(n.angle) > 0.1 ? "hanging" : Math.sin(n.angle) < -0.1 ? "baseline" : "middle"}
             >
@@ -114,12 +114,12 @@ export function RadialDiagram() {
         ))}
 
         {/* Flanking Terminal Nodes */}
-        <g transform="translate(80, 300)" className="font-mono text-[13px]" textAnchor="middle" dominantBaseline="middle">
+        <g transform="translate(80, 300)" className="font-display text-[13px]" textAnchor="middle" dominantBaseline="middle">
           <rect x="-45" y="-16" width="90" height="32" rx="16" style={{ fill: 'var(--color-bg)' }} stroke="var(--color-border)" strokeWidth="1.5" />
           <text y="1" fill="var(--color-text-primary)">Your Repo</text>
         </g>
 
-        <g transform="translate(720, 300)" className="font-mono text-[13px]" textAnchor="middle" dominantBaseline="middle">
+        <g transform="translate(720, 300)" className="font-display text-[13px]" textAnchor="middle" dominantBaseline="middle">
           <rect x="-60" y="-18" width="120" height="36" rx="18" fill="var(--color-btn-dark)" />
           <text y="1" fill="var(--color-btn-dark-text)">Your Question</text>
         </g>

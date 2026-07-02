@@ -107,3 +107,99 @@ async def improve(dataset: str) -> Any:
 async def forget(dataset: str) -> Any:
     """Delete an entire dataset's subgraph (maps to ``cognee.forget``)."""
     return await cognee.forget(dataset=dataset)
+
+
+async def get_graph_data(repo: str | None = None) -> dict:
+    """Return raw graph nodes and edges from Cognee's graph engine.
+
+    Serialises every node and edge into plain dicts so the result is
+    JSON-safe for the REST ``/graph`` endpoint.
+    """
+    from cognee.infrastructure.databases.graph import get_graph_engine
+
+    graph_engine = await get_graph_engine()
+    nodes, edges = await graph_engine.get_graph_data()
+
+    # --- Serialise nodes ---------------------------------------------------
+    serialized_nodes: list[dict] = []
+    for node in nodes:
+        n: dict = {}
+        if isinstance(node, (list, tuple)) and len(node) == 2 and isinstance(node[1], dict):
+            node_id = str(node[0])
+            node_props = node[1]
+            n = {
+                "id": node_id,
+                "type": str(node_props.get("type", "Unknown")),
+                "name": str(node_props.get("name", node_props.get("text", node_id))),
+            }
+            # Add all other properties to the node dictionary
+            for k, v in node_props.items():
+                if k not in n:
+                    n[k] = str(v) if not isinstance(v, (str, int, float, bool, type(None))) else v
+        elif isinstance(node, dict):
+            node_id = str(node.get("id", ""))
+            n = {
+                "id": node_id,
+                "type": str(node.get("type", "Unknown")),
+                "name": str(node.get("name", node.get("text", node_id))),
+            }
+            for k, v in node.items():
+                if k not in n:
+                    n[k] = str(v) if not isinstance(v, (str, int, float, bool, type(None))) else v
+        else:
+            node_id = str(getattr(node, "id", node))
+            n = {
+                "id": node_id,
+                "name": str(getattr(node, "name", getattr(node, "id", node))),
+                "type": str(getattr(node, "type", "Unknown")),
+            }
+            if hasattr(node, "__dict__"):
+                for k, v in node.__dict__.items():
+                    if k not in n:
+                        n[k] = str(v) if not isinstance(v, (str, int, float, bool, type(None))) else v
+        serialized_nodes.append(n)
+
+    # --- Serialise edges ---------------------------------------------------
+    serialized_edges: list[dict] = []
+    for edge in edges:
+        e: dict = {}
+        if isinstance(edge, (list, tuple)) and len(edge) >= 3:
+            edge_props = edge[3] if len(edge) > 3 and isinstance(edge[3], dict) else {}
+            e = {
+                "source": str(edge[0]),
+                "target": str(edge[1]),
+                "relationship_name": str(edge[2]),
+            }
+            for k, v in edge_props.items():
+                if k not in e:
+                    e[k] = str(v) if not isinstance(v, (str, int, float, bool, type(None))) else v
+        elif isinstance(edge, dict):
+            e = {
+                "source": str(edge.get("source", edge.get("source_node_id", ""))),
+                "target": str(edge.get("target", edge.get("target_node_id", ""))),
+                "relationship_name": str(edge.get("relationship_name", edge.get("label", edge.get("type", "RELATED_TO")))),
+            }
+            for k, v in edge.items():
+                if k not in e:
+                    e[k] = str(v) if not isinstance(v, (str, int, float, bool, type(None))) else v
+        else:
+            e = {
+                "source": str(getattr(edge, "source_node_id", getattr(edge, "source", ""))),
+                "target": str(getattr(edge, "target_node_id", getattr(edge, "target", ""))),
+                "relationship_name": str(
+                    getattr(
+                        edge,
+                        "relationship_name",
+                        getattr(edge, "label", getattr(edge, "type", "RELATED_TO")),
+                    )
+                ),
+            }
+            if hasattr(edge, "__dict__"):
+                for k, v in edge.__dict__.items():
+                    if k not in e:
+                        e[k] = str(v) if not isinstance(v, (str, int, float, bool, type(None))) else v
+        serialized_edges.append(e)
+
+    return {"nodes": serialized_nodes, "edges": serialized_edges}
+
+

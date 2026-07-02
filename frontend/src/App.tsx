@@ -1,23 +1,18 @@
-import { Navbar } from './components/Navbar';
-import { Hero } from './components/Hero';
-import { About } from './components/About';
-import { Features } from './components/Features';
-import { UseCases } from './components/UseCases';
-import { Benefits } from './components/Benefits';
-import { Footer } from './components/Footer';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+
+import LandingPage from './components/LandingPage';
+import GraphVisualize from './components/GraphVisualize';
+import DocsPage from './components/DocsPage';
+
+const router = createBrowserRouter([
+  { path: '/', element: <LandingPage /> },
+  { path: '/visualize', element: <GraphVisualize /> },
+  {
+    path: '/docs/*',
+    element: <DocsPage />,
+  },
+]);
 
 export default function App() {
-  return (
-    <div className="min-h-screen bg-bg selection:bg-accent-orchid selection:text-text-primary">
-      <Navbar />
-      <main>
-        <Hero />
-        <About />
-        <Features />
-        <UseCases />
-        <Benefits />
-      </main>
-      <Footer />
-    </div>
-  );
+  return <RouterProvider router={router} />;
 }

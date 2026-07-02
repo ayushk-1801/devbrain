@@ -7,6 +7,7 @@ passed per request.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import logging
@@ -42,6 +43,20 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="DevBrain", version="0.1.0", lifespan=lifespan)
+
+# Keeps strong references to background tasks so the GC cannot collect them
+# mid-execution. Tasks remove themselves when done.
+_bg_tasks: set[asyncio.Task] = set()
+
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # --- Models --------------------------------------------------------------
@@ -119,6 +134,15 @@ async def prune_module(owner: str, repo: str, module: str) -> dict:
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+@app.get("/graph")
+async def graph_data(repo: str | None = Query(None)) -> dict:
+    """Return the full knowledge graph (nodes + edges) for visualization."""
+    try:
+        return await service.get_graph_data(repo=repo)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 # --- Changelog & user-update routes -------------------------------------
 
 
@@ -159,9 +183,9 @@ async def changelog_generate(
             )
 
     if notify:
-        import asyncio
-
-        asyncio.create_task(cl_notifier.dispatch_all_users(repo, cl, user_updates_map))
+        _t = asyncio.create_task(cl_notifier.dispatch_all_users(repo, cl, user_updates_map))
+        _bg_tasks.add(_t)
+        _t.add_done_callback(_bg_tasks.discard)
 
     return {
         "repo": repo,
@@ -415,9 +439,6 @@ async def _handle_release(repo: str, payload: dict) -> None:
     if payload.get("action") != "published":
         return
     try:
-        owner, _ = repo.split("/", 1)
-        from backend.ingestion import releases as rel_mod
-
         release = payload.get("release", {})
         tag = release.get("tag_name", "")
         await service.enqueue_release(repo, tag)

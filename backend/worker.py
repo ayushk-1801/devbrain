@@ -114,6 +114,17 @@ async def task_ingest_pr_review(ctx: dict, repo: str, pr_number: int, review_id:
 
 
 # ---------------------------------------------------------------------------
+# Graph data task
+# ---------------------------------------------------------------------------
+
+async def task_get_graph_data(ctx: dict, repo: str | None = None) -> dict:
+    """Return the full knowledge graph data for visualization."""
+    from backend.memory.client import get_graph_data
+    logger.info("task_get_graph_data: fetching graph data for repo=%s", repo)
+    return await get_graph_data(repo=repo)
+
+
+# ---------------------------------------------------------------------------
 # Startup / shutdown hooks — connect Cognee once per worker process
 # ---------------------------------------------------------------------------
 
@@ -144,6 +155,7 @@ class WorkerSettings:
         task_query,
         task_refresh,
         task_forget_module,
+        task_get_graph_data,
     ]
     on_startup = startup
     on_shutdown = shutdown

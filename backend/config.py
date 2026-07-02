@@ -190,7 +190,7 @@ def dataset_name(owner: str, repo: str, kind: str) -> str:
     This is the single source of truth for dataset naming — never hand-build
     dataset strings elsewhere, or cross-source graph traversal breaks.
     """
-    valid = {"commits", "prs", "adrs", "ast", "issues", "profiles"}
+    valid = {"commits", "prs", "adrs", "ast", "issues", "profiles", "releases"}
     if kind not in valid:
         raise ValueError(
             f"unknown dataset kind {kind!r}; expected one of {sorted(valid)}"

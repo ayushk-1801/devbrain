@@ -8,9 +8,13 @@ library and are easy to test with fixtures.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Optional
+from zipfile import ZipFile
 
-from backend.config import github_client
+import httpx
+
+from backend.config import github_client, settings
 
 # ADR locations to probe, per AGENTS.md.
 ADR_DIRS = ["docs/decisions", "adr", "docs/adr", ".decisions"]
@@ -20,7 +24,9 @@ def _get_repo(owner: str, repo: str):
     return github_client().get_repo(f"{owner}/{repo}")
 
 
-def fetch_commits(owner: str, repo: str, since_days: Optional[int] = None) -> list[dict[str, Any]]:
+def fetch_commits(
+    owner: str, repo: str, since_days: Optional[int] = None
+) -> list[dict[str, Any]]:
     """Return commits as plain dicts, optionally limited to the last N days."""
     gh_repo = _get_repo(owner, repo)
     kwargs: dict[str, Any] = {}
@@ -97,9 +103,7 @@ def _pr_to_dict(pr) -> dict[str, Any]:
         for c in pr.get_issue_comments()
     ]
     approvals = [
-        r.user.login
-        for r in pr.get_reviews()
-        if r.state == "APPROVED" and r.user
+        r.user.login for r in pr.get_reviews() if r.state == "APPROVED" and r.user
     ]
     reviews = _extract_reviews(pr)
     return {
@@ -122,12 +126,14 @@ def _extract_reviews(pr) -> list[dict[str, Any]]:
     for r in pr.get_reviews():
         if not r.user:
             continue
-        reviews.append({
-            "author": r.user.login,
-            "state": r.state,
-            "body": r.body or "",
-            "submitted_at": r.submitted_at.isoformat() if r.submitted_at else "",
-        })
+        reviews.append(
+            {
+                "author": r.user.login,
+                "state": r.state,
+                "body": r.body or "",
+                "submitted_at": r.submitted_at.isoformat() if r.submitted_at else "",
+            }
+        )
     return reviews
 
 
@@ -226,25 +232,69 @@ def fetch_repo_tree(owner: str, repo: str) -> dict[str, Any]:
     return {"default_branch": branch, "files": files}
 
 
+def download_repo_archive(owner: str, repo: str, destination_dir: str | Path) -> Path:
+    """Download the default branch as a zip archive and extract it locally.
+
+    Cognee's code graph pipeline requires a local repository path. This helper
+    avoids a git binary dependency and works for private repos when
+    ``GITHUB_TOKEN`` has read access.
+    """
+    gh_repo = _get_repo(owner, repo)
+    branch = gh_repo.default_branch
+    archive_url = gh_repo.get_archive_link("zipball", ref=branch)
+
+    destination = Path(destination_dir)
+    destination.mkdir(parents=True, exist_ok=True)
+    archive_path = destination / f"{owner}-{repo}-{branch}.zip"
+
+    headers = {"Accept": "application/vnd.github+json"}
+    if settings.GITHUB_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.GITHUB_TOKEN}"
+
+    with httpx.stream(
+        "GET", archive_url, headers=headers, follow_redirects=True, timeout=120
+    ) as response:
+        response.raise_for_status()
+        with archive_path.open("wb") as archive_file:
+            for chunk in response.iter_bytes():
+                archive_file.write(chunk)
+
+    with ZipFile(archive_path) as archive:
+        archive.extractall(destination)
+
+    extracted_roots = [p for p in destination.iterdir() if p.is_dir()]
+    if not extracted_roots:
+        raise RuntimeError(
+            f"GitHub archive for {owner}/{repo} did not contain a repo directory"
+        )
+    return extracted_roots[0]
+
+
 def fetch_releases(owner: str, repo: str) -> list[dict[str, Any]]:
     """Return GitHub releases as plain dicts."""
     gh_repo = _get_repo(owner, repo)
     out: list[dict[str, Any]] = []
     for release in gh_repo.get_releases():
-        out.append({
-            "tag": release.tag_name,
-            "name": release.title or release.tag_name,
-            "body": release.body or "",
-            "author": release.author.login if release.author else "unknown",
-            "created_at": release.created_at.isoformat() if release.created_at else "",
-            "published_at": release.published_at.isoformat() if release.published_at else "",
-            "prerelease": release.prerelease,
-            "draft": release.draft,
-            "assets": [
-                {"name": a.name, "size": a.size, "download_count": a.download_count}
-                for a in release.get_assets()
-            ],
-        })
+        out.append(
+            {
+                "tag": release.tag_name,
+                "name": release.title or release.tag_name,
+                "body": release.body or "",
+                "author": release.author.login if release.author else "unknown",
+                "created_at": release.created_at.isoformat()
+                if release.created_at
+                else "",
+                "published_at": release.published_at.isoformat()
+                if release.published_at
+                else "",
+                "prerelease": release.prerelease,
+                "draft": release.draft,
+                "assets": [
+                    {"name": a.name, "size": a.size, "download_count": a.download_count}
+                    for a in release.get_assets()
+                ],
+            }
+        )
     return out
 
 
@@ -254,13 +304,22 @@ def fetch_tags(owner: str, repo: str) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for tag in gh_repo.get_tags():
         commit = tag.commit
-        out.append({
-            "name": tag.name,
-            "sha": commit.sha if commit else "",
-            "message": commit.commit.message if commit and commit.commit else "",
-            "author": commit.commit.author.name if commit and commit.commit and commit.commit.author else "unknown",
-            "date": commit.commit.author.date.isoformat() if commit and commit.commit and commit.commit.author and commit.commit.author.date else "",
-        })
+        out.append(
+            {
+                "name": tag.name,
+                "sha": commit.sha if commit else "",
+                "message": commit.commit.message if commit and commit.commit else "",
+                "author": commit.commit.author.name
+                if commit and commit.commit and commit.commit.author
+                else "unknown",
+                "date": commit.commit.author.date.isoformat()
+                if commit
+                and commit.commit
+                and commit.commit.author
+                and commit.commit.author.date
+                else "",
+            }
+        )
     return out
 
 
@@ -278,23 +337,24 @@ def fetch_deployments(owner: str, repo: str) -> list[dict[str, Any]]:
                     status = {
                         "state": latest.state,
                         "description": latest.description or "",
-                        "created_at": latest.created_at.isoformat() if latest.created_at else "",
+                        "created_at": latest.created_at.isoformat()
+                        if latest.created_at
+                        else "",
                     }
             except Exception:
                 pass
-            out.append({
-                "id": dep.id,
-                "ref": dep.ref,
-                "sha": dep.sha,
-                "environment": dep.environment or "",
-                "description": dep.description or "",
-                "creator": dep.creator.login if dep.creator else "unknown",
-                "created_at": dep.created_at.isoformat() if dep.created_at else "",
-                "status": status,
-            })
+            out.append(
+                {
+                    "id": dep.id,
+                    "ref": dep.ref,
+                    "sha": dep.sha,
+                    "environment": dep.environment or "",
+                    "description": dep.description or "",
+                    "creator": dep.creator.login if dep.creator else "unknown",
+                    "created_at": dep.created_at.isoformat() if dep.created_at else "",
+                    "status": status,
+                }
+            )
     except Exception:
         pass  # Some repos may not have deployments permission
     return out
-
-
-

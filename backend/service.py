@@ -109,7 +109,6 @@ async def full_sync(repo: str, sync_history_days: int | None = None) -> dict[str
         "prs": await pull_requests.ingest_prs(owner, name, since_days=sync_history_days),
         "issues": await issues.ingest_issues(owner, name, since_days=sync_history_days),
         "adrs": await adrs.ingest_adrs(owner, name),
-        "codegraph": await codegraph.ingest_codegraph(owner, name),
         "releases": await releases.ingest_all_releases(owner, name),
     }
     registry.add_repo(repo)
@@ -184,5 +183,14 @@ async def refresh(repo: str | None = None) -> dict[str, Any]:
     queue = await get_queue()
     job = await queue.enqueue_job("task_refresh", repo)
     result = await job.result(timeout=300)
+    await queue.aclose()
+    return result
+
+
+async def get_graph_data(repo: str | None = None) -> dict[str, Any]:
+    """Fetch the full knowledge graph (nodes + edges) via the worker."""
+    queue = await get_queue()
+    job = await queue.enqueue_job("task_get_graph_data", repo)
+    result = await job.result(timeout=60)
     await queue.aclose()
     return result
