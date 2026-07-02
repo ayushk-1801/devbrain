@@ -61,7 +61,7 @@ export function Navbar() {
             ? '0 8px 32px rgba(0,0,0,0.06)' 
             : 'none',
         }}
-        className={`w-full pointer-events-auto flex items-center justify-between relative border px-6 md:px-7 transition-all duration-300 ${
+        className={`w-full pointer-events-auto flex items-center justify-between relative border px-6 md:px-7 transition-[background-color,border-color,box-shadow] duration-300 ${
           scrolled ? 'backdrop-blur-xl' : 'backdrop-blur-none'
         }`}
       >
