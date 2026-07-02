@@ -1,10 +1,9 @@
-"""Deep AST ingestion via cognee[codegraph].
+"""Deep AST/code graph ingestion via ``cognee.remember()`` with file paths.
 
-Extracts functions, classes, methods, imports, and call graphs from source code.
-Requires: pip install cognee[codegraph]
-
-This module uses Cognee's codegraph capability to parse source files into
-a structured knowledge graph of code entities and their relationships.
+Downloads the repo archive, then feeds every supported source file into
+Cognee's built-in pipeline (add → cognify → improve). Cognee's default
+loaders handle code files and extract functions, classes, imports, and
+their relationships into the knowledge graph.
 """
 
 from __future__ import annotations
@@ -12,6 +11,7 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
+from pathlib import Path
 from typing import Any
 
 from backend.config import dataset_name
@@ -20,122 +20,70 @@ from backend.memory import client as memory
 
 logger = logging.getLogger("devbrain.codegraph")
 
-# File extensions supported by cognee codegraph.
 CODEGRAPH_EXTS = {
-    ".py": "python",
-    ".js": "javascript",
-    ".jsx": "javascript",
-    ".ts": "typescript",
-    ".tsx": "typescript",
-    ".go": "go",
-    ".rs": "rust",
-    ".java": "java",
-    ".cs": "csharp",
-    ".php": "php",
-    ".rb": "ruby",
+    ".py", ".js", ".jsx", ".ts", ".tsx",
+    ".go", ".rs", ".java", ".cs", ".php", ".rb",
 }
 
 
-def _structure_from_codegraph(owner: str, repo: str, tree: dict[str, Any]) -> str:
-    """Build a structured code summary from the repo file tree.
+def _collect_source_files(repo_path: Path) -> list[str]:
+    files: list[str] = []
+    for root, _dirs, entries in os.walk(repo_path):
+        for name in entries:
+            ext = os.path.splitext(name)[1].lower()
+            if ext in CODEGRAPH_EXTS:
+                files.append(os.path.join(root, name))
+    return sorted(files)
 
-    This is the fallback when cognee[codegraph] is not installed.
-    Produces a richer summary than the basic codebase.py by categorizing
-    files by type and estimating module boundaries.
-    """
-    by_lang: dict[str, list[str]] = {}
-    by_dir: dict[str, list[str]] = {}
 
-    for f in tree.get("files", []):
-        path = f["path"]
-        ext = os.path.splitext(path)[1].lower()
-        lang = CODEGRAPH_EXTS.get(ext)
-        if not lang:
-            continue
-
-        by_lang.setdefault(lang, []).append(path)
-        directory = os.path.dirname(path) or "."
-        by_dir.setdefault(directory, []).append(os.path.basename(path))
+def _manifest_payload(
+    owner: str, repo: str, code_files: list[str], branch: str
+) -> str:
+    by_lang: dict[str, int] = {}
+    for fp in code_files:
+        ext = os.path.splitext(fp)[1].lower().lstrip(".")
+        by_lang[ext] = by_lang.get(ext, 0) + 1
 
     lines = [
-        f"# Deep code structure of {owner}/{repo} "
-        f"(branch: {tree.get('default_branch', 'main')})\n",
+        f"# CodeGraph manifest for {owner}/{repo}",
         "",
-        "## Languages",
+        f"Default branch: `{branch}`",
+        f"Canonical DevBrain AST dataset: `{dataset_name(owner, repo, 'ast')}`",
+        f"Source files ingested: {len(code_files)}",
+        "",
+        "Cognee ingestion was run on a local archive of this repository.",
+        "Each source file was fed to `cognee.remember()`, which runs the",
+        "default add → cognify → improve pipeline for entity extraction.",
+        "",
+        "## Languages detected",
     ]
-    for lang in sorted(by_lang):
-        files = by_lang[lang]
-        lines.append(f"- {lang}: {len(files)} files")
-        for fp in sorted(files)[:10]:
-            lines.append(f"  - `{fp}`")
-        if len(files) > 10:
-            lines.append(f"  - ... and {len(files) - 10} more")
-
-    lines.append("")
-    lines.append("## Modules / directories")
-    for directory in sorted(by_dir):
-        files = sorted(by_dir[directory])
-        code_files = [f for f in files if any(f.endswith(ext) for ext in CODEGRAPH_EXTS)]
-        if code_files:
-            lines.append(f"- `{directory}/`: {', '.join(code_files)}")
-
+    for lang, count in sorted(by_lang.items()):
+        lines.append(f"- {lang}: {count} files")
     return "\n".join(lines) + "\n"
 
 
-def _extract_entities_from_tree(tree: dict[str, Any]) -> dict[str, Any]:
-    """Extract high-level entities from file tree for graph enrichment."""
-    modules = {}
-    for f in tree.get("files", []):
-        path = f["path"]
-        ext = os.path.splitext(path)[1].lower()
-        if ext not in CODEGRAPH_EXTS:
-            continue
-
-        parts = path.replace("\\", "/").split("/")
-        if len(parts) > 1:
-            module = parts[0]
-            if module not in modules:
-                modules[module] = {"files": [], "submodules": set()}
-            modules[module]["files"].append(path)
-            if len(parts) > 2:
-                modules[module]["submodules"].add(parts[1])
-
-    # Convert sets to lists for JSON serialization.
-    for mod in modules.values():
-        mod["submodules"] = sorted(mod["submodules"])
-    return modules
-
-
-def _codegraph_payload(owner: str, repo: str, tree: dict[str, Any]) -> str:
-    """Generate the codegraph memory payload."""
-    base = _structure_from_codegraph(owner, repo, tree)
-    entities = _extract_entities_from_tree(tree)
-
-    entity_lines = ["", "## Module dependencies (inferred)", ""]
-    for mod_name, mod_info in sorted(entities.items()):
-        submodules = mod_info.get("submodules", [])
-        if submodules:
-            entity_lines.append(
-                f"- `{mod_name}` likely depends on: {', '.join(f'`{s}`' for s in submodules)}"
-            )
-
-    return base + "\n".join(entity_lines) + "\n"
-
-
 async def ingest_codegraph(owner: str, repo: str) -> int:
-    """Ingest deep code structure via codegraph (or fallback to tree-based).
+    """Ingest source code by downloading the repo and feeding files to Cognee.
 
-    Returns the number of code-bearing directories found.
+    Returns the number of source files ingested.
     """
-    tree = github_client.fetch_repo_tree(owner, repo)
-    payload = _codegraph_payload(owner, repo, tree)
-    await memory.remember(payload, dataset_name(owner, repo, "codegraph"))
+    ast_dataset = dataset_name(owner, repo, "ast")
 
-    # Count code dirs for summary.
-    dirs = set()
-    for f in tree.get("files", []):
-        ext = os.path.splitext(f["path"])[1].lower()
-        if ext in CODEGRAPH_EXTS:
-            d = os.path.dirname(f["path"]) or "."
-            dirs.add(d)
-    return len(dirs)
+    with tempfile.TemporaryDirectory(prefix="devbrain-codegraph-") as tmpdir:
+        repo_path = github_client.download_repo_archive(owner, repo, tmpdir)
+        code_files = _collect_source_files(repo_path)
+
+        if not code_files:
+            logger.warning("No supported source files found in %s/%s", owner, repo)
+            return 0
+
+        logger.info(
+            "Ingesting %d source files into dataset %s", len(code_files), ast_dataset
+        )
+        await memory.remember(code_files, ast_dataset)
+
+    branch = github_client.fetch_repo_tree(owner, repo).get("default_branch", "main")
+    await memory.remember(
+        _manifest_payload(owner, repo, code_files, branch), ast_dataset
+    )
+    return len(code_files)

@@ -1,4 +1,4 @@
-cognee[gemini]
+cognee[gemini,codegraph]
 mcp
 fastapi
 uvicorn[standard]
