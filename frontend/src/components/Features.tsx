@@ -94,13 +94,13 @@ export function Features() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="flex flex-col items-center text-center w-full"
       >
-        <h2 className="font-display text-[36px] md:text-[56px] lg:text-[60px] font-extrabold text-text-primary leading-[1.1] max-w-[800px] tracking-tight">
+        <h2 className="font-display text-[32px] sm:text-[36px] md:text-[56px] lg:text-[60px] font-extrabold text-text-primary leading-[1.1] max-w-[800px] tracking-tight">
           What's inside DevBrain
         </h2>
       </motion.div>
 
       {/* Tabs Row */}
-      <div className="flex flex-row flex-wrap justify-center gap-6 md:gap-[48px] mt-[60px] w-full px-4">
+      <div className="flex flex-row overflow-x-auto md:overflow-visible flex-nowrap md:flex-wrap justify-start md:justify-center gap-6 md:gap-[48px] mt-[60px] w-full px-4 no-scrollbar pb-3 md:pb-0">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           const Icon = tab.icon;
@@ -140,7 +140,7 @@ export function Features() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -16 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 md:h-[480px]"
+            className="grid grid-cols-1 md:grid-cols-3 gap-8 md:min-h-[480px]"
           >
             {tabContent[activeTab].map((card, idx) => (
               <div 

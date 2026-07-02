@@ -289,8 +289,8 @@ export function Footer() {
 
         <Logo className="h-6 w-auto text-text-primary mb-8" />
 
-        <h2 className="font-display text-[40px] md:text-[56px] font-black text-text-primary leading-[1.1] max-w-[720px] text-center tracking-tight">
-          Build AI agents that actually<br />understand your codebase.
+        <h2 className="font-display text-[32px] sm:text-[40px] md:text-[56px] font-black text-text-primary leading-[1.1] max-w-[720px] text-center tracking-tight">
+          Build AI agents that actually<br className="hidden sm:inline" /> understand your codebase.
         </h2>
 
         <p className="font-display text-[16px] md:text-[17px] text-text-muted max-w-[520px] mt-6 text-center leading-[1.6]">

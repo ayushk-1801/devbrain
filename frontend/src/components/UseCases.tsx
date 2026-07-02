@@ -53,20 +53,20 @@ export function UseCases() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="flex flex-col items-center text-center w-full"
       >
-        <h2 className="font-display text-[36px] md:text-[56px] lg:text-[60px] font-extrabold text-text-primary leading-[1.1] max-w-[800px] tracking-tight">
+        <h2 className="font-display text-[32px] sm:text-[36px] md:text-[56px] lg:text-[60px] font-extrabold text-text-primary leading-[1.1] max-w-[800px] tracking-tight">
           Where DevBrain helps
         </h2>
       </motion.div>
 
       {/* Pill Switcher */}
-      <div className="flex flex-row justify-center gap-3 mt-12 mb-16">
+      <div className="flex flex-row flex-wrap justify-center gap-3 mt-12 mb-16 w-full px-4">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`font-mono text-[14px] px-[24px] py-[10px] rounded-full border-[1.5px] transition-colors cursor-pointer ${
+              className={`font-display text-[14px] px-[24px] py-[10px] rounded-full border-[1.5px] transition-colors cursor-pointer ${
                 isActive 
                   ? 'border-border text-[#040200] font-bold ' + (
                       tab.id === 'onboarding' ? 'bg-accent-mint'

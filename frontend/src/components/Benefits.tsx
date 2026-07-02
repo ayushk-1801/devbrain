@@ -95,7 +95,7 @@ export function Benefits() {
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="flex flex-col items-center text-center w-full max-w-[800px] z-10 lg:-mt-16"
         >
-          <h2 className="font-display text-[36px] md:text-[56px] lg:text-[60px] font-extrabold text-text-primary leading-[1.1] tracking-tight">
+          <h2 className="font-display text-[32px] sm:text-[36px] md:text-[56px] lg:text-[60px] font-extrabold text-text-primary leading-[1.1] tracking-tight">
             Engineered for Complete Codebase Intelligence
           </h2>
           <p className="font-display text-[16px] md:text-[18px] text-text-muted max-w-[640px] mt-6 leading-[1.7]">
