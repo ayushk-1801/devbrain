@@ -5,7 +5,7 @@ import {
   Network, Search, Loader2, AlertCircle, X, ZoomIn, ZoomOut,
   Maximize2, Link as LinkIcon, GitCommit, GitPullRequest, User,
   FileText, BookOpen, Box, Code, Layers, AlertTriangle, Tag,
-  ArrowLeft, Info, BarChart3, ChevronDown
+  ArrowLeft, Info, BarChart3, ChevronDown, MessageSquare, Send, GitBranch
 } from 'lucide-react';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -94,6 +94,7 @@ export default function GraphVisualize() {
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
 
   const [url, setUrl] = useState('http://localhost:8000');
+  const [repo, setRepo] = useState('');
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,6 +104,10 @@ export default function GraphVisualize() {
   const [showLegend, setShowLegend] = useState(true);
   const [showStats, setShowStats] = useState(true);
   const [graphRendered, setGraphRendered] = useState(false);
+  const [query, setQuery] = useState('');
+  const [queryResult, setQueryResult] = useState<string | null>(null);
+  const [queryLoading, setQueryLoading] = useState(false);
+  const [queryError, setQueryError] = useState<string | null>(null);
 
   // ─── Fetch Graph Data ──────────────────────────────────────────────────────
 
@@ -115,7 +120,10 @@ export default function GraphVisualize() {
 
     try {
       const cleanUrl = url.replace(/\/+$/, '');
-      const res = await fetch(`${cleanUrl}/graph`);
+      const params = new URLSearchParams();
+      if (repo.trim()) params.set('repo', repo.trim());
+      const qs = params.toString() ? `?${params}` : '';
+      const res = await fetch(`${cleanUrl}/graph${qs}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       const data: GraphData = await res.json();
 
@@ -132,7 +140,30 @@ export default function GraphVisualize() {
     } finally {
       setLoading(false);
     }
-  }, [url]);
+  }, [url, repo]);
+
+  const fetchQuery = useCallback(async () => {
+    if (!query.trim()) return;
+    setQueryLoading(true);
+    setQueryResult(null);
+    setQueryError(null);
+    try {
+      const cleanUrl = url.replace(/\/+$/, '');
+      const params = new URLSearchParams({ q: query.trim() });
+      if (repo.trim()) params.set('repo', repo.trim());
+      const res = await fetch(`${cleanUrl}/query?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const answer =
+        typeof data === 'string' ? data
+        : data.answer ?? data.result ?? data.text ?? JSON.stringify(data, null, 2);
+      setQueryResult(answer);
+    } catch (err) {
+      setQueryError(err instanceof Error ? err.message : 'Query failed');
+    } finally {
+      setQueryLoading(false);
+    }
+  }, [url, repo, query]);
 
   // ─── Stats Computation ────────────────────────────────────────────────────
 
@@ -264,7 +295,7 @@ export default function GraphVisualize() {
       .join('text')
       .text(d => (d as SimLink).relationship_name)
       .attr('font-size', '8px')
-      .attr('font-family', 'var(--font-mono)')
+      .attr('font-family', 'var(--font-display)')
       .attr('fill', 'var(--color-text-muted)')
       .attr('opacity', 0)
       .attr('text-anchor', 'middle')
@@ -303,7 +334,7 @@ export default function GraphVisualize() {
         return label.length > 16 ? label.slice(0, 14) + '…' : label;
       })
       .attr('font-size', d => Math.max(8, Math.min(12, getNodeRadius(d.connectionCount) * 0.8)) + 'px')
-      .attr('font-family', 'var(--font-mono)')
+      .attr('font-family', 'var(--font-display)')
       .attr('fill', 'var(--color-text-primary)')
       .attr('text-anchor', 'middle')
       .attr('dy', d => getNodeRadius(d.connectionCount) + 14)
@@ -561,6 +592,10 @@ export default function GraphVisualize() {
     if (e.key === 'Enter') fetchGraph();
   }, [fetchGraph]);
 
+  const handleQueryKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') fetchQuery();
+  }, [fetchQuery]);
+
   // ─── Unique node types from current data ──────────────────────────────────
 
   const nodeTypes = graphData
@@ -630,7 +665,22 @@ export default function GraphVisualize() {
                 value={url}
                 onChange={e => setUrl(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Backend URL (e.g. http://localhost:8000)"
+                placeholder="http://localhost:8000"
+                className="flex-1 bg-transparent text-text-primary font-mono text-sm outline-none placeholder:text-text-inactive min-w-0"
+              />
+            </div>
+
+            <div className="w-px h-6 bg-border/30 shrink-0" />
+
+            {/* Repo Input */}
+            <div className="flex items-center gap-2 w-40 shrink-0">
+              <GitBranch size={14} className="text-text-muted shrink-0" />
+              <input
+                type="text"
+                value={repo}
+                onChange={e => setRepo(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="owner/repo"
                 className="flex-1 bg-transparent text-text-primary font-mono text-sm outline-none placeholder:text-text-inactive min-w-0"
               />
             </div>
@@ -762,7 +812,7 @@ export default function GraphVisualize() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30"
+            className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30"
           >
             <div
               className="flex items-center gap-3 px-5 py-3 rounded-2xl border backdrop-blur-xl max-w-lg"
@@ -790,7 +840,7 @@ export default function GraphVisualize() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: graphRendered ? 1 : 0, x: graphRendered ? 0 : 20 }}
           transition={{ duration: 0.4, delay: 0.3 }}
-          className="absolute bottom-6 right-6 z-20 flex flex-col gap-1"
+          className="absolute bottom-20 right-6 z-20 flex flex-col gap-1"
         >
           {[
             { icon: ZoomIn, action: () => handleZoom('in'), label: 'Zoom In' },
@@ -819,7 +869,7 @@ export default function GraphVisualize() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: graphRendered ? 1 : 0, x: graphRendered ? 0 : -20 }}
           transition={{ duration: 0.4, delay: 0.2 }}
-          className="absolute bottom-6 left-6 z-20"
+          className="absolute bottom-20 left-6 z-20"
         >
           <div
             className="rounded-2xl border backdrop-blur-xl overflow-hidden"
@@ -975,7 +1025,7 @@ export default function GraphVisualize() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.3 }}
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-4"
+            className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-4"
           >
             <div
               className="rounded-2xl border backdrop-blur-xl p-4"
@@ -1034,6 +1084,90 @@ export default function GraphVisualize() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ─── Query Result Panel ──────────────────────────────────────── */}
+      <AnimatePresence>
+        {(queryResult || queryError) && (
+          <motion.div
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.3 }}
+            className="absolute top-20 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4"
+          >
+            <div
+              className="rounded-2xl border backdrop-blur-xl p-4"
+              style={{
+                background: queryError
+                  ? 'color-mix(in srgb, #FF4444 10%, var(--color-bg-card) 80%)'
+                  : 'color-mix(in srgb, var(--color-accent-mint) 8%, var(--color-bg-card) 85%)',
+                borderColor: queryError
+                  ? 'color-mix(in srgb, #FF4444 30%, transparent)'
+                  : 'color-mix(in srgb, var(--color-accent-mint) 30%, transparent)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <MessageSquare size={16} className="text-text-muted shrink-0 mt-0.5" />
+                <p className="font-mono text-xs text-text-primary flex-1 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
+                  {queryError ? `Error: ${queryError}` : queryResult}
+                </p>
+                <button
+                  onClick={() => { setQueryResult(null); setQueryError(null); }}
+                  className="text-text-muted hover:text-text-primary transition-colors cursor-pointer shrink-0"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Query Bar ───────────────────────────────────────────────── */}
+      <motion.div
+        initial={{ y: 60, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="absolute bottom-4 left-4 right-4 z-30"
+      >
+        <div className="mx-auto max-w-3xl">
+          <div
+            className="flex items-center gap-3 px-4 py-2.5 rounded-2xl border backdrop-blur-xl"
+            style={{
+              background: 'color-mix(in srgb, var(--color-bg-card) 75%, transparent)',
+              borderColor: 'color-mix(in srgb, var(--color-border) 30%, transparent)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.08), 0 0 0 1px rgba(255,255,255,0.05) inset',
+            }}
+          >
+            <MessageSquare size={16} className="text-text-muted shrink-0" />
+            <input
+              type="text"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              onKeyDown={handleQueryKeyDown}
+              placeholder="Ask DevBrain anything about your codebase… (Enter to submit)"
+              className="flex-1 bg-transparent text-text-primary font-mono text-sm outline-none placeholder:text-text-inactive min-w-0"
+            />
+            <button
+              onClick={fetchQuery}
+              disabled={queryLoading || !query.trim()}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-xl font-mono text-xs font-semibold transition-all duration-200 shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+              style={{
+                background: queryLoading ? 'var(--color-bg-secondary)' : 'var(--color-btn-dark)',
+                color: queryLoading ? 'var(--color-text-muted)' : 'var(--color-btn-dark-text)',
+              }}
+            >
+              {queryLoading ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Send size={14} />
+              )}
+              <span className="hidden sm:inline">{queryLoading ? 'Asking…' : 'Ask'}</span>
+            </button>
+          </div>
+        </div>
+      </motion.div>
 
       {/* ─── Hover Tooltip ───────────────────────────────────────────── */}
       <AnimatePresence>

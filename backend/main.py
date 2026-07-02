@@ -135,10 +135,10 @@ async def prune_module(owner: str, repo: str, module: str) -> dict:
 
 
 @app.get("/graph")
-async def graph_data() -> dict:
+async def graph_data(repo: str | None = Query(None)) -> dict:
     """Return the full knowledge graph (nodes + edges) for visualization."""
     try:
-        return await service.get_graph_data()
+        return await service.get_graph_data(repo=repo)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 

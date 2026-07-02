@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Copy, Check } from 'lucide-react';
-import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'motion/react';
+import { motion, useMotionValue, useReducedMotion, useSpring, useTransform, useScroll } from 'motion/react';
 import { Logo } from './ui/Logo';
 
 const VIEWBOX_WIDTH = 1410;
@@ -85,8 +85,154 @@ function SiteFooterInteractiveLogotype() {
   );
 }
 
+const agents = [
+  {
+    name: "Claude Code",
+    bg: "bg-white",
+    borderColor: "border-[rgba(4,2,0,0.08)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    position: "top-[2%] left-[4%] lg:left-[16%]",
+    dx: -60,
+    dy: -40,
+    logo: (
+      <img src="/claude-ai.svg" alt="Claude Code" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+    )
+  },
+  {
+    name: "Cursor",
+    bg: "bg-white",
+    borderColor: "border-[rgba(4,2,0,0.08)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    position: "top-[12%] right-[5%] lg:right-[15%]",
+    dx: 60,
+    dy: -30,
+    logo: (
+      <img src="/cursor.png" alt="Cursor" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+    )
+  },
+  {
+    name: "GitHub Copilot",
+    bg: "bg-white",
+    borderColor: "border-[rgba(4,2,0,0.08)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    position: "top-[22%] left-[2%] lg:left-[4%]",
+    dx: -80,
+    dy: -10,
+    logo: (
+      <img src="/github-copilot-removebg-preview.png" alt="GitHub Copilot" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+    )
+  },
+  {
+    name: "Antigravity",
+    bg: "bg-white",
+    borderColor: "border-[rgba(4,2,0,0.08)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    position: "top-[44%] left-[6%] lg:left-[14%]",
+    dx: -60,
+    dy: 10,
+    logo: (
+      <img src="/google-antigravity.png" alt="Antigravity" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+    )
+  },
+  {
+    name: "Zed",
+    bg: "bg-white",
+    borderColor: "border-[rgba(4,2,0,0.08)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    position: "top-[34%] right-[2%] lg:right-[3%]",
+    dx: 70,
+    dy: -10,
+    logo: (
+      <img src="/Zed_Editor_Logo.png" alt="Zed" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+    )
+  },
+  {
+    name: "OpenAI Codex",
+    bg: "bg-white",
+    borderColor: "border-[rgba(4,2,0,0.08)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    position: "top-[56%] right-[8%] lg:right-[18%]",
+    dx: 50,
+    dy: 20,
+    logo: (
+      <img src="/codex-color-removebg-preview.png" alt="OpenAI Codex" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+    )
+  },
+  {
+    name: "n8n",
+    bg: "bg-white",
+    borderColor: "border-[rgba(4,2,0,0.08)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    position: "top-[68%] left-[1%] lg:left-[2%]",
+    dx: -70,
+    dy: 40,
+    logo: (
+      <img src="/n8n-icon.webp" alt="n8n" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+    )
+  },
+  {
+    name: "OpenCode",
+    bg: "bg-white",
+    borderColor: "border-[rgba(4,2,0,0.08)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    position: "top-[88%] left-[5%] lg:left-[12%]",
+    dx: -50,
+    dy: 60,
+    logo: (
+      <img src="/opencode-logo-removebg-preview.png" alt="OpenCode" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+    )
+  },
+  {
+    name: "Windsurf",
+    bg: "bg-white",
+    borderColor: "border-[rgba(4,2,0,0.08)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    position: "top-[74%] right-[3%] lg:right-[6%]",
+    dx: 70,
+    dy: 40,
+    logo: (
+      <img src="/images-removebg-preview.png" alt="Windsurf" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+    )
+  },
+  {
+    name: "Aider",
+    bg: "bg-white",
+    borderColor: "border-[rgba(4,2,0,0.08)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    position: "top-[92%] right-[7%] lg:right-[12%]",
+    dx: 50,
+    dy: 60,
+    logo: (
+      <img src="/images12-removebg-preview.png" alt="Aider" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+    )
+  }
+];
+
+function AgentIcon({ agent, progress }: { agent: typeof agents[0]; progress: any }) {
+  const x = useTransform(progress, [0, 1], [0, agent.dx * (typeof window !== 'undefined' && window.innerWidth < 1024 ? 0.35 : 1)]);
+  const y = useTransform(progress, [0, 1], [0, agent.dy * (typeof window !== 'undefined' && window.innerWidth < 1024 ? 0.35 : 1)]);
+
+  return (
+    <motion.div
+      style={{ x, y }}
+      whileHover={{ scale: 1.1, rotate: Math.random() > 0.5 ? 3 : -3 }}
+      className={`absolute pointer-events-auto ${agent.position} w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-[14px] sm:rounded-[18px] lg:rounded-[24px] ${agent.bg} border border-border-soft flex items-center justify-center cursor-pointer transition-[box-shadow,border-color] duration-300 shadow-sm ${agent.shadowColor}`}
+      title={agent.name}
+    >
+      {agent.logo}
+    </motion.div>
+  );
+}
+
 export function Footer() {
   const [copied, setCopied] = useState(false);
+  const footerRef = useRef<HTMLElement>(null);
+  const ctaRef = useRef<HTMLDivElement>(null);
+
+  const { scrollYProgress } = useScroll({
+    target: ctaRef,
+    offset: ["start end", "center center"]
+  });
 
   const handleCopy = () => {
     navigator.clipboard.writeText("docker-compose up");
@@ -96,6 +242,7 @@ export function Footer() {
 
   return (
     <footer 
+      ref={footerRef}
       className="w-full flex flex-col mt-20 relative bg-bg"
     >
       {/* Top Ribbon Wave */}
@@ -132,23 +279,30 @@ export function Footer() {
       </div>
 
       {/* CTA Content */}
-      <div className="w-full flex flex-col items-center justify-center pt-8 pb-16 px-6 z-10 bg-transparent">
+      <div ref={ctaRef} className="w-full relative flex flex-col items-center justify-center pt-24 pb-28 px-6 z-10 bg-transparent max-w-[1200px] mx-auto overflow-visible min-h-[520px]">
+        {/* Scattered Agent Logos (Mobile & Desktop) */}
+        <div className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden">
+          {agents.map((agent, index) => (
+            <AgentIcon key={index} agent={agent} progress={scrollYProgress} />
+          ))}
+        </div>
+
         <Logo className="h-6 w-auto text-text-primary mb-8" />
 
-        <h2 className="font-display text-[40px] md:text-[56px] font-black text-text-primary leading-[1.1] max-w-[720px] text-center tracking-tight">
-          Build AI agents that actually<br />understand your codebase.
+        <h2 className="font-display text-[32px] sm:text-[40px] md:text-[56px] font-black text-text-primary leading-[1.1] max-w-[720px] text-center tracking-tight">
+          Build AI agents that actually<br className="hidden sm:inline" /> understand your codebase.
         </h2>
 
         <p className="font-display text-[16px] md:text-[17px] text-text-muted max-w-[520px] mt-6 text-center leading-[1.6]">
           One Docker command. Any GitHub repo.<br />Connects to Claude Code in under 5 minutes.
         </p>
 
-        <button className="bg-btn-dark text-btn-dark-text font-mono text-[14px] md:text-[15px] font-medium px-[32px] py-[16px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer mt-10 hover:bg-[#3a3836]">
+        <button className="bg-btn-dark text-btn-dark-text text-[14px] md:text-[15px] font-medium px-[32px] py-[16px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer mt-10 hover:bg-[#3a3836]">
           Deploy with Docker
         </button>
 
         <div className="mt-8 bg-bg-card border-[1.5px] border-[rgba(4,2,0,0.12)] rounded-[16px] px-[32px] py-[20px] inline-flex items-center gap-4 hover:border-[rgba(4,2,0,0.24)] transition-colors group">
-          <span className="font-mono text-[15px] text-text-primary">docker-compose up</span>
+          <span className="font-code text-[15px] text-text-primary">docker-compose up</span>
           <button 
             onClick={handleCopy} 
             className="text-text-muted group-hover:text-text-primary transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-border rounded"
@@ -157,6 +311,8 @@ export function Footer() {
             {copied ? <Check size={16} /> : <Copy size={16} />}
           </button>
         </div>
+
+
       </div>
 
       {/* Bottom Ribbon Wave */}
@@ -197,13 +353,13 @@ export function Footer() {
 
       {/* Footer Bar */}
       <div className="w-full border-t border-[rgba(4,2,0,0.1)] px-[24px] md:px-[48px] py-[24px] flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="font-mono text-[13px] text-text-muted">
+        <div className="text-[13px] text-text-muted">
           © 2026 DevBrain
         </div>
         <div className="flex items-center gap-[24px]">
-          <a href="#" className="font-mono text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">Terms</a>
-          <a href="https://github.com/ayushk-1801/devbrain" className="font-mono text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">GitHub</a>
-          <a href="#" className="font-mono text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">Docs</a>
+          <a href="#" className="text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">Terms</a>
+          <a href="https://github.com/ayushk-1801/devbrain" className="text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">GitHub</a>
+          <a href="#" className="text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">Docs</a>
         </div>
       </div>
     </footer>

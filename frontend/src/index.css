@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
 
 @theme {
   --color-bg: #FEFEF3;
@@ -22,7 +24,24 @@
   --color-accent-powder: #CFE3EA;
 
   --font-display: 'Plus Jakarta Sans', -apple-system, sans-serif;
-  --font-mono: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-code: 'JetBrains Mono', monospace;
+
+  /* Fumadocs overrides - matching our landing page design system */
+  --color-fd-background: var(--color-fd-background);
+  --color-fd-foreground: var(--color-text-primary);
+  --color-fd-muted: var(--color-fd-muted);
+  --color-fd-muted-foreground: var(--color-text-muted);
+  --color-fd-card: var(--color-fd-card);
+  --color-fd-card-foreground: var(--color-text-primary);
+  --color-fd-popover: var(--color-fd-card);
+  --color-fd-popover-foreground: var(--color-text-primary);
+  --color-fd-border: var(--color-border-soft);
+  --color-fd-primary: var(--color-btn-dark);
+  --color-fd-primary-foreground: var(--color-btn-dark-text);
+  --color-fd-accent: var(--color-fd-muted);
+  --color-fd-accent-foreground: var(--color-text-primary);
+  --color-fd-ring: var(--color-border-soft);
 }
 
 @layer base {
@@ -30,12 +49,16 @@
     --color-bg: #FEFEF3;
     --color-bg-secondary: #F3F3E8;
     --color-bg-card: #F3F2DE;
+    --color-fd-background: #FAF9F5;
+    --color-fd-muted: #F2F1EB;
+    --color-fd-card: #EFEFE8;
     --color-text-primary: #040200;
     --color-text-muted: #6B6A5E;
     --color-text-inactive: #AEADA5;
     --color-btn-dark: #232120;
     --color-btn-dark-text: #FEFEF3;
     --color-border: #222222;
+    --color-border-soft: #E5E4D7;
     --accent-mint: #D8F0E4;
     --accent-yellow: #F3FE7A;
     --accent-peach: #FFD3BA;
@@ -55,14 +78,22 @@
     --color-bg: #0C0B08;
     --color-bg-secondary: #141310;
     --color-bg-card: #1C1A15;
+    --color-fd-background: #0C0B08;
+    --color-fd-muted: #141310;
+    --color-fd-card: #1C1A15;
     --color-text-primary: #F6F6EB;
     --color-text-muted: #9C9A8E;
     --color-text-inactive: #5C5A52;
     --color-btn-dark: #F6F6EB;
     --color-btn-dark-text: #0C0B08;
     --color-border: #444238;
+    --color-border-soft: #2D2B24;
   }
   
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     background-color: var(--color-bg);
     color: var(--color-text-primary);
@@ -73,14 +104,15 @@
 
   /* Text styles */
   .font-display { font-family: var(--font-display); }
-  .font-mono { font-family: var(--font-mono); }
+  .font-mono { font-family: var(--font-display) !important; }
+  .font-code { font-family: var(--font-mono); }
 
   /* Utility classes mapped from requirements */
   .section-padding { padding-top: var(--space-section); padding-bottom: var(--space-section); }
   .content-container { max-width: var(--content-max-width); margin: 0 auto; padding: 0 48px; }
   
   button:focus-visible, a:focus-visible {
-    outline: 2px solid var(--color-border);
+    outline: 2px solid var(--color-border-soft);
     outline-offset: 2px;
   }
   

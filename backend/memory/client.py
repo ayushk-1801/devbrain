@@ -109,7 +109,7 @@ async def forget(dataset: str) -> Any:
     return await cognee.forget(dataset=dataset)
 
 
-async def get_graph_data() -> dict:
+async def get_graph_data(repo: str | None = None) -> dict:
     """Return raw graph nodes and edges from Cognee's graph engine.
 
     Serialises every node and edge into plain dicts so the result is

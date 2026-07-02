@@ -12,7 +12,7 @@ export function About() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="flex flex-col items-center text-center w-full"
       >
-        <h2 className="font-display text-[36px] md:text-[56px] lg:text-[60px] font-extrabold text-text-primary leading-[1.1] max-w-[800px] tracking-tight">
+        <h2 className="font-display text-[32px] sm:text-[36px] md:text-[56px] lg:text-[60px] font-extrabold text-text-primary leading-[1.1] max-w-[800px] tracking-tight">
           One graph. Every decision.<br />Permanently searchable.
         </h2>
         <p className="font-display text-[16px] md:text-[18px] text-text-muted max-w-[640px] mt-6 leading-[1.7]">

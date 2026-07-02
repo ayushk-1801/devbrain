@@ -94,13 +94,13 @@ export function Features() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="flex flex-col items-center text-center w-full"
       >
-        <h2 className="font-display text-[36px] md:text-[56px] lg:text-[60px] font-extrabold text-text-primary leading-[1.1] max-w-[800px] tracking-tight">
+        <h2 className="font-display text-[32px] sm:text-[36px] md:text-[56px] lg:text-[60px] font-extrabold text-text-primary leading-[1.1] max-w-[800px] tracking-tight">
           What's inside DevBrain
         </h2>
       </motion.div>
 
       {/* Tabs Row */}
-      <div className="flex flex-row flex-wrap justify-center gap-6 md:gap-[48px] mt-[60px] w-full px-4">
+      <div className="flex flex-row overflow-x-auto md:overflow-visible flex-nowrap md:flex-wrap justify-start md:justify-center gap-6 md:gap-[48px] mt-[60px] w-full px-4 no-scrollbar pb-3 md:pb-0">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           const Icon = tab.icon;
@@ -108,18 +108,18 @@ export function Features() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className="group flex flex-col items-center gap-3 relative min-w-[120px] snap-center cursor-pointer pb-3"
+              className="group flex flex-col items-center gap-2 sm:gap-3 relative min-w-[80px] sm:min-w-[120px] snap-center cursor-pointer pb-2 sm:pb-3"
             >
-              <Icon size={24} className={isActive ? 'text-text-primary' : 'text-text-inactive group-hover:text-text-muted transition-colors'} />
-              <div className="flex flex-col items-center">
-                <span className={`font-mono text-[14px] ${isActive ? 'text-text-primary font-bold' : 'text-text-inactive group-hover:text-text-muted transition-colors'}`}>
+              <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${isActive ? 'text-text-primary' : 'text-text-inactive group-hover:text-text-muted transition-colors'}`} />
+              <div className="relative pb-1 flex flex-col items-center">
+                <span className={`text-[12px] sm:text-[14px] ${isActive ? 'text-text-primary font-bold' : 'text-text-inactive group-hover:text-text-muted transition-colors'}`}>
                   {tab.label}
                 </span>
                 
                 {/* Active Underline with Loading Animation */}
                 {isActive && (
                   <motion.div 
-                    className="absolute bottom-0 left-0 h-[2px] bg-text-primary"
+                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-text-primary"
                     initial={{ width: "0%" }}
                     animate={{ width: "100%" }}
                     transition={{ duration: 8, ease: "linear" }}
@@ -140,7 +140,7 @@ export function Features() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -16 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 md:h-[480px]"
+            className="grid grid-cols-1 md:grid-cols-3 gap-8 md:min-h-[480px]"
           >
             {tabContent[activeTab].map((card, idx) => (
               <div 
