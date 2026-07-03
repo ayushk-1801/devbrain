@@ -17,6 +17,7 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from backend import service
+from backend import issues_service
 from backend.changelog import notifier as cl_notifier
 from backend.changelog import profile as cl_profile
 from backend.changelog import tracker as cl_tracker
@@ -525,3 +526,271 @@ async def github_webhook(request: Request) -> dict:
         await handler(full_name, payload)
         return {"status": "accepted", "event": event}
     return {"status": "ignored", "event": event}
+
+
+# --- GitHub Issues REST API Endpoints ---
+
+class CreateIssueRequest(BaseModel):
+    title: str
+    body: str = ""
+    labels: list[str] = None
+    assignees: list[str] = None
+    milestone: int = None
+
+class UpdateIssueRequest(BaseModel):
+    title: str = None
+    body: str = None
+    state: str = None
+    labels: list[str] = None
+    milestone: int = None
+    assignees: list[str] = None
+
+class AddLabelsRequest(BaseModel):
+    labels: list[str]
+
+class CreateLabelRequest(BaseModel):
+    name: str
+    color: str
+    description: str = ""
+
+class AssignIssueRequest(BaseModel):
+    assignees: list[str]
+
+class CommentIssueRequest(BaseModel):
+    body: str
+
+
+@app.post("/issues")
+async def api_create_issue(
+    req: CreateIssueRequest,
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    try:
+        return await issues_service.create_issue(
+            repo, req.title, req.body, req.labels, req.assignees, req.milestone
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/issues/{number}")
+async def api_get_issue(
+    number: int,
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    try:
+        return await issues_service.get_issue(repo, number)
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@app.patch("/issues/{number}")
+async def api_update_issue(
+    number: int,
+    req: UpdateIssueRequest,
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    try:
+        return await issues_service.update_issue(
+            repo, number, req.title, req.body, req.state, req.labels, req.milestone, req.assignees
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/issues/{number}/close")
+async def api_close_issue(
+    number: int,
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    try:
+        return await issues_service.close_issue(repo, number)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/issues/{number}/reopen")
+async def api_reopen_issue(
+    number: int,
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    try:
+        return await issues_service.reopen_issue(repo, number)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/issues")
+async def api_list_issues(
+    repo: str = Query(..., description="owner/repo"),
+    state: str = Query("open", description="open | closed | all"),
+    assignee: str = Query(None),
+    creator: str = Query(None),
+    mentioned: str = Query(None),
+    labels: list[str] = Query(None),
+) -> list[dict]:
+    try:
+        return await issues_service.list_issues(
+            repo, state, assignee, creator, mentioned, labels
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/issues/search")
+async def api_search_issues(
+    q: str = Query(..., description="search query"),
+    repo: str = Query(..., description="owner/repo"),
+) -> list[dict]:
+    try:
+        return await issues_service.search_issues(repo, q)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/issues/my-issues")
+async def api_list_my_issues(
+    username: str = Query(..., description="GitHub username"),
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    try:
+        return await issues_service.list_my_issues(repo, username)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/issues/{number}/labels")
+async def api_add_labels(
+    number: int,
+    req: AddLabelsRequest,
+    repo: str = Query(..., description="owner/repo"),
+) -> list[str]:
+    try:
+        return await issues_service.add_labels(repo, number, req.labels)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.delete("/issues/{number}/labels/{label_name}")
+async def api_remove_label(
+    number: int,
+    label_name: str,
+    repo: str = Query(..., description="owner/repo"),
+) -> list[str]:
+    try:
+        return await issues_service.remove_label(repo, number, label_name)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.put("/issues/{number}/labels")
+async def api_replace_labels(
+    number: int,
+    req: AddLabelsRequest,
+    repo: str = Query(..., description="owner/repo"),
+) -> list[str]:
+    try:
+        return await issues_service.replace_labels(repo, number, req.labels)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/labels")
+async def api_list_labels(
+    repo: str = Query(..., description="owner/repo"),
+) -> list[dict]:
+    try:
+        return await issues_service.list_labels(repo)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/labels")
+async def api_create_label(
+    req: CreateLabelRequest,
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    try:
+        return await issues_service.create_label(repo, req.name, req.color, req.description)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/issues/{number}/assign")
+async def api_assign_issue(
+    number: int,
+    req: AssignIssueRequest,
+    repo: str = Query(..., description="owner/repo"),
+) -> list[str]:
+    try:
+        return await issues_service.assign_issue(repo, number, req.assignees)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/issues/{number}/unassign")
+async def api_unassign_issue(
+    number: int,
+    req: AssignIssueRequest,
+    repo: str = Query(..., description="owner/repo"),
+) -> list[str]:
+    try:
+        return await issues_service.unassign_issue(repo, number, req.assignees)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/assignees")
+async def api_list_assignees(
+    repo: str = Query(..., description="owner/repo"),
+) -> list[str]:
+    try:
+        return await issues_service.list_assignees(repo)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/issues/{number}/comments")
+async def api_comment_issue(
+    number: int,
+    req: CommentIssueRequest,
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    try:
+        return await issues_service.comment_issue(repo, number, req.body)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.patch("/comments/{comment_id}")
+async def api_edit_comment(
+    comment_id: int,
+    req: CommentIssueRequest,
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    try:
+        return await issues_service.edit_comment(repo, comment_id, req.body)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.delete("/comments/{comment_id}")
+async def api_delete_comment(
+    comment_id: int,
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    try:
+        return await issues_service.delete_comment(repo, comment_id)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/issues/{number}/comments")
+async def api_list_comments(
+    number: int,
+    repo: str = Query(..., description="owner/repo"),
+) -> list[dict]:
+    try:
+        return await issues_service.list_comments(repo, number)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
