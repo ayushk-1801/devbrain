@@ -5,7 +5,7 @@ import {
   Network, Search, Loader2, AlertCircle, X, ZoomIn, ZoomOut,
   Maximize2, Link as LinkIcon, GitCommit, GitPullRequest, User,
   FileText, BookOpen, Box, Code, Layers, AlertTriangle, Tag,
-  ArrowLeft, Info, BarChart3, ChevronDown, MessageSquare, Send, GitBranch
+  ArrowLeft, Info, BarChart3, ChevronDown, MessageSquare, Send, GitBranch, Eye
 } from 'lucide-react';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -85,6 +85,33 @@ function getNodeRadius(connectionCount: number): number {
   return Math.max(6, Math.min(24, 6 + connectionCount * 2));
 }
 
+function findShortestPath(startId: string, endId: string, edges: any[]): string[] | null {
+  if (startId === endId) return [startId];
+  const queue: string[][] = [[startId]];
+  const visited = new Set<string>([startId]);
+  
+  while (queue.length > 0) {
+    const path = queue.shift()!;
+    const node = path[path.length - 1];
+    
+    const neighbors: string[] = [];
+    edges.forEach(e => {
+      if (e.source === node) neighbors.push(e.target);
+      if (e.target === node) neighbors.push(e.source);
+    });
+    
+    for (const neighbor of neighbors) {
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        const newPath = [...path, neighbor];
+        if (neighbor === endId) return newPath;
+        queue.push(newPath);
+      }
+    }
+  }
+  return null;
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export default function GraphVisualize() {
@@ -108,6 +135,60 @@ export default function GraphVisualize() {
   const [queryResult, setQueryResult] = useState<string | null>(null);
   const [queryLoading, setQueryLoading] = useState(false);
   const [queryError, setQueryError] = useState<string | null>(null);
+  const [selectedRepoFilter, setSelectedRepoFilter] = useState<string>('');
+  const [hiddenNodeTypes, setHiddenNodeTypes] = useState<Set<string>>(new Set());
+  const [isRepoDropdownOpen, setIsRepoDropdownOpen] = useState(false);
+  const [hiddenEdgeTypes, setHiddenEdgeTypes] = useState<Set<string>>(new Set());
+  const [maxHops, setMaxHops] = useState<number>(99);
+  const [pruning, setPruning] = useState(false);
+  const [visualSearch, setVisualSearch] = useState('');
+  const [showSettingsSections, setShowSettingsSections] = useState({
+    edges: false,
+  });
+
+  const zoomToNode = useCallback((node: SimNode) => {
+    if (!svgRef.current || !zoomRef.current || !node) return;
+    const svg = d3.select(svgRef.current);
+    const container = containerRef.current;
+    if (!container) return;
+    
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+    
+    const scale = 2.0; 
+    const tx = width / 2 - node.x! * scale;
+    const ty = height / 2 - node.y! * scale;
+    
+    svg.transition()
+      .duration(750)
+      .ease(d3.easeCubicInOut)
+      .call(zoomRef.current.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+  }, []);
+
+  const toggleNodeType = useCallback((type: string) => {
+    setHiddenNodeTypes(prev => {
+      const next = new Set(prev);
+      if (next.has(type)) {
+        next.delete(type);
+      } else {
+        next.add(type);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleEdgeType = useCallback((type: string) => {
+    setHiddenEdgeTypes(prev => {
+      const next = new Set(prev);
+      if (next.has(type)) {
+        next.delete(type);
+      } else {
+        next.add(type);
+      }
+      return next;
+    });
+  }, []);
+
 
   // ─── Fetch Graph Data ──────────────────────────────────────────────────────
 
@@ -117,6 +198,12 @@ export default function GraphVisualize() {
     setError(null);
     setSelectedNode(null);
     setGraphRendered(false);
+    setSelectedRepoFilter('');
+    setHiddenNodeTypes(new Set());
+    setIsRepoDropdownOpen(false);
+    setHiddenEdgeTypes(new Set());
+    setMaxHops(99);
+    setVisualSearch('');
 
     try {
       const cleanUrl = url.replace(/\/+$/, '');
@@ -141,6 +228,26 @@ export default function GraphVisualize() {
       setLoading(false);
     }
   }, [url, repo]);
+
+  const pruneModule = useCallback(async (node: SimNode) => {
+    if (!node.repo || !node.name) return;
+    setPruning(true);
+    try {
+      const cleanUrl = url.replace(/\/+$/, '');
+      const [owner, name] = (node.repo as string).split('/');
+      const res = await fetch(`${cleanUrl}/module/${owner}/${name}/${node.name}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      
+      setSelectedNode(null);
+      fetchGraph();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Pruning failed');
+    } finally {
+      setPruning(false);
+    }
+  }, [url, fetchGraph]);
 
   const fetchQuery = useCallback(async () => {
     if (!query.trim()) return;
@@ -194,14 +301,66 @@ export default function GraphVisualize() {
     // Clear previous render
     svg.selectAll('*').remove();
 
+    // ─── Filter nodes based on type and repository ────────────────────
+    const filteredNodes = graphData.nodes.filter(n => {
+      if (hiddenNodeTypes.has(n.type)) return false;
+      if (selectedRepoFilter && n.repo && n.repo !== selectedRepoFilter) return false;
+      return true;
+    });
+
+    const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
+
+    // Keep edges only if relationship is not hidden and endpoints are visible
+    const filteredEdges = graphData.edges.filter(e => {
+      const rel = e.relationship_name || e.relationship || 'RELATED_TO';
+      if (hiddenEdgeTypes.has(rel)) return false;
+      return filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target);
+    });
+
+    // ─── Filter by Neighborhood (Hops) if active ──────────────────────
+    let finalNodes = filteredNodes;
+    if (selectedNode && maxHops < 99) {
+      const visited = new Set<string>([selectedNode.id]);
+      let currentQueue = [selectedNode.id];
+      for (let hop = 0; hop < maxHops; hop++) {
+        const nextQueue: string[] = [];
+        currentQueue.forEach(nodeId => {
+          filteredEdges.forEach(e => {
+            if (e.source === nodeId && !visited.has(e.target)) {
+              visited.add(e.target);
+              nextQueue.push(e.target);
+            }
+            if (e.target === nodeId && !visited.has(e.source)) {
+              visited.add(e.source);
+              nextQueue.push(e.source);
+            }
+          });
+        });
+        currentQueue = nextQueue;
+      }
+      finalNodes = filteredNodes.filter(n => visited.has(n.id));
+    }
+
+    const finalNodeIds = new Set(finalNodes.map(n => n.id));
+
+    // Keep edges only if both endpoints are in the final nodes list
+    const finalEdges = filteredEdges.filter(e => {
+      return finalNodeIds.has(e.source) && finalNodeIds.has(e.target);
+    });
+
+    // ─── Reset selected node if it gets filtered out ──────────────────
+    if (selectedNode && !finalNodeIds.has(selectedNode.id)) {
+      setSelectedNode(null);
+    }
+
     // ─── Build node map with connection counts ────────────────────────
     const connectionCounts = new Map<string, number>();
-    graphData.edges.forEach(e => {
+    finalEdges.forEach(e => {
       connectionCounts.set(e.source, (connectionCounts.get(e.source) || 0) + 1);
       connectionCounts.set(e.target, (connectionCounts.get(e.target) || 0) + 1);
     });
 
-    const simNodes: SimNode[] = graphData.nodes.map(n => ({
+    const simNodes: SimNode[] = finalNodes.map(n => ({
       ...n,
       x: width / 2 + (Math.random() - 0.5) * width * 0.6,
       y: height / 2 + (Math.random() - 0.5) * height * 0.6,
@@ -210,8 +369,7 @@ export default function GraphVisualize() {
 
     const nodeById = new Map(simNodes.map(n => [n.id, n]));
 
-    const simLinks: SimLink[] = graphData.edges
-      .filter(e => nodeById.has(e.source) && nodeById.has(e.target))
+    const simLinks: SimLink[] = finalEdges
       .map(e => ({
         ...e,
         source: e.source,
@@ -349,7 +507,51 @@ export default function GraphVisualize() {
         setHoveredNode(d);
         setTooltipPos({ x: event.clientX, y: event.clientY });
 
-        // Enlarge hovered node
+        // If selectedNode is set, let's calculate and highlight the shortest path to this node
+        if (selectedNode && selectedNode.id !== d.id) {
+          const path = findShortestPath(selectedNode.id, d.id, finalEdges);
+          if (path) {
+            const pathNodeIds = new Set(path);
+            const pathPairs = new Set<string>();
+            for (let i = 0; i < path.length - 1; i++) {
+              pathPairs.add(`${path[i]}-${path[i+1]}`);
+              pathPairs.add(`${path[i+1]}-${path[i]}`);
+            }
+
+            // Highlight path nodes and dim others
+            nodeGs.select('.node-circle')
+              .transition().duration(150)
+              .attr('opacity', (n: SimNode) => pathNodeIds.has(n.id) ? 1.0 : 0.15)
+              .attr('stroke', (n: SimNode) => pathNodeIds.has(n.id) ? 'var(--color-accent-peach)' : (d3.color(getNodeColor(n.type))?.darker(0.4)?.toString() || '#888'))
+              .attr('stroke-width', (n: SimNode) => pathNodeIds.has(n.id) ? 3.0 : 1.5);
+
+            nodeGs.select('.node-glow')
+              .transition().duration(150)
+              .attr('opacity', (n: SimNode) => pathNodeIds.has(n.id) ? 0.35 : 0.02);
+
+            // Highlight path edges and dim others
+            linkLines
+              .transition().duration(150)
+              .attr('stroke-opacity', (l: SimLink) => {
+                const src = typeof l.source === 'object' ? (l.source as SimNode).id : l.source as string;
+                const tgt = typeof l.target === 'object' ? (l.target as SimNode).id : l.target as string;
+                return pathPairs.has(`${src}-${tgt}`) ? 0.9 : 0.02;
+              })
+              .attr('stroke-width', (l: SimLink) => {
+                const src = typeof l.source === 'object' ? (l.source as SimNode).id : l.source as string;
+                const tgt = typeof l.target === 'object' ? (l.target as SimNode).id : l.target as string;
+                return pathPairs.has(`${src}-${tgt}`) ? 3.0 : 0.5;
+              })
+              .attr('stroke', (l: SimLink) => {
+                const src = typeof l.source === 'object' ? (l.source as SimNode).id : l.source as string;
+                const tgt = typeof l.target === 'object' ? (l.target as SimNode).id : l.target as string;
+                return pathPairs.has(`${src}-${tgt}`) ? 'var(--color-accent-peach)' : 'var(--color-text-muted)';
+              });
+            return;
+          }
+        }
+
+        // Standard single-node hover highlight
         d3.select(this).select('.node-circle')
           .transition().duration(200)
           .attr('r', getNodeRadius(d.connectionCount) * 1.3)
@@ -387,24 +589,115 @@ export default function GraphVisualize() {
       .on('mouseleave', function (_event: MouseEvent, d: SimNode) {
         setHoveredNode(null);
 
-        d3.select(this).select('.node-circle')
-          .transition().duration(300)
-          .attr('r', getNodeRadius(d.connectionCount))
-          .attr('filter', null);
-        d3.select(this).select('.node-glow')
-          .transition().duration(300)
-          .attr('r', getNodeRadius(d.connectionCount) + 4)
-          .attr('opacity', 0.15);
+        const q = visualSearch.trim().toLowerCase();
+        if (q) {
+          const matchMap = new Map();
+          svg.selectAll<SVGGElement, SimNode>('.node-group').each(function (n) {
+            const isMatch = (n.name || '').toLowerCase().includes(q) ||
+                            (n.id || '').toLowerCase().includes(q) ||
+                            (n.description || '').toLowerCase().includes(q) ||
+                            (n.type || '').toLowerCase().includes(q);
+            matchMap.set(n.id, isMatch);
 
-        // Reset edges if no selected node
-        if (!selectedNode) {
-          linkLabels.transition().duration(300).attr('opacity', 0);
+            d3.select(this).select('.node-circle')
+              .transition().duration(200)
+              .attr('opacity', isMatch ? 1.0 : 0.1)
+              .attr('stroke', isMatch ? 'var(--color-accent-yellow)' : '#555')
+              .attr('stroke-width', isMatch ? 3.0 : 1.0)
+              .attr('filter', isMatch ? 'url(#highlight-glow)' : null);
+
+            d3.select(this).select('.node-glow')
+              .transition().duration(200)
+              .attr('opacity', isMatch ? 0.45 : 0.01)
+              .attr('filter', isMatch ? 'url(#highlight-glow)' : null);
+          });
+
+          linkLines
+            .transition().duration(200)
+            .attr('stroke-opacity', (l: SimLink) => {
+              const src = typeof l.source === 'object' ? (l.source as SimNode).id : l.source as string;
+              const tgt = typeof l.target === 'object' ? (l.target as SimNode).id : l.target as string;
+              return (matchMap.get(src) && matchMap.get(tgt)) ? 0.8 : 0.02;
+            })
+            .attr('stroke-width', (l: SimLink) => {
+              const src = typeof l.source === 'object' ? (l.source as SimNode).id : l.source as string;
+              const tgt = typeof l.target === 'object' ? (l.target as SimNode).id : l.target as string;
+              return (matchMap.get(src) && matchMap.get(tgt)) ? 2.0 : 0.5;
+            });
+          
+          linkLabels.transition().duration(200).attr('opacity', 0);
+          return;
+        }
+
+        // Reset elements back to standard or selected state
+        if (selectedNode) {
+          const connectedIds = new Set<string>([selectedNode.id]);
+          simLinks.forEach(l => {
+            const src = typeof l.source === 'object' ? (l.source as SimNode).id : l.source as string;
+            const tgt = typeof l.target === 'object' ? (l.target as SimNode).id : l.target as string;
+            if (src === selectedNode.id) connectedIds.add(tgt);
+            if (tgt === selectedNode.id) connectedIds.add(src);
+          });
+
+          nodeGs.select('.node-circle')
+            .transition().duration(200)
+            .attr('r', (n: SimNode) => getNodeRadius(n.connectionCount))
+            .attr('opacity', (n: SimNode) => connectedIds.has(n.id) ? 1.0 : 0.15)
+            .attr('stroke', (n: SimNode) => d3.color(getNodeColor(n.type))?.darker(0.4)?.toString() || '#888')
+            .attr('stroke-width', 1.5)
+            .attr('filter', null);
+
+          nodeGs.select('.node-glow')
+            .transition().duration(200)
+            .attr('r', (n: SimNode) => getNodeRadius(n.connectionCount) + 4)
+            .attr('opacity', (n: SimNode) => connectedIds.has(n.id) ? 0.35 : 0.03);
+
+          linkLines
+            .transition().duration(200)
+            .attr('stroke-opacity', (l: SimLink) => {
+              const src = typeof l.source === 'object' ? (l.source as SimNode).id : l.source as string;
+              const tgt = typeof l.target === 'object' ? (l.target as SimNode).id : l.target as string;
+              return (src === selectedNode.id || tgt === selectedNode.id) ? 0.7 : 0.03;
+            })
+            .attr('stroke-width', (l: SimLink) => {
+              const src = typeof l.source === 'object' ? (l.source as SimNode).id : l.source as string;
+              const tgt = typeof l.target === 'object' ? (l.target as SimNode).id : l.target as string;
+              return (src === selectedNode.id || tgt === selectedNode.id) ? 2.5 : 0.5;
+            })
+            .attr('stroke', 'var(--color-text-muted)')
+            .attr('marker-end', (l: SimLink) => {
+              const src = typeof l.source === 'object' ? (l.source as SimNode).id : l.source as string;
+              const tgt = typeof l.target === 'object' ? (l.target as SimNode).id : l.target as string;
+              return (src === selectedNode.id || tgt === selectedNode.id) ? 'url(#arrowhead-highlight)' : 'url(#arrowhead)';
+            });
+        } else {
+          d3.select(this).select('.node-circle')
+            .transition().duration(300)
+            .attr('r', getNodeRadius(d.connectionCount))
+            .attr('opacity', 0.9)
+            .attr('stroke', d3.color(getNodeColor(d.type))?.darker(0.4)?.toString() || '#888')
+            .attr('stroke-width', 1.5)
+            .attr('filter', null);
+          d3.select(this).select('.node-glow')
+            .transition().duration(300)
+            .attr('r', getNodeRadius(d.connectionCount) + 4)
+            .attr('opacity', 0.15);
+
           linkLines.transition().duration(300)
             .attr('stroke-opacity', 0.15)
             .attr('stroke-width', 1)
+            .attr('stroke', 'var(--color-text-muted)')
             .attr('marker-end', 'url(#arrowhead)');
         }
+
+        linkLabels.transition().duration(200).attr('opacity', 0);
       });
+
+    // Double click to focus/zoom to node
+    nodeGs.on('dblclick', (event: MouseEvent, d: SimNode) => {
+      event.stopPropagation();
+      zoomToNode(d);
+    });
 
     // Click to select/highlight connections
     nodeGs.on('click', (_event: MouseEvent, d: SimNode) => {
@@ -567,7 +860,67 @@ export default function GraphVisualize() {
       simulation.stop();
       style.remove();
     };
-  }, [graphData]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [graphData, selectedRepoFilter, hiddenNodeTypes, hiddenEdgeTypes, maxHops]);
+
+  useEffect(() => {
+    if (!graphRendered || !svgRef.current) return;
+    const svg = d3.select(svgRef.current);
+    const q = visualSearch.trim().toLowerCase();
+
+    if (!q) {
+      svg.selectAll('.node-circle')
+        .transition().duration(200)
+        .attr('opacity', 0.9)
+        .attr('stroke', (n: any) => d3.color(getNodeColor(n.type))?.darker(0.4)?.toString() || '#888')
+        .attr('stroke-width', 1.5)
+        .attr('filter', null);
+      
+      svg.selectAll('.node-glow')
+        .transition().duration(200)
+        .attr('opacity', 0.15)
+        .attr('filter', null);
+        
+      svg.selectAll('line')
+        .transition().duration(200)
+        .attr('stroke-opacity', 0.15)
+        .attr('stroke-width', 1);
+      return;
+    }
+
+    const matchMap = new Map();
+    svg.selectAll<SVGGElement, SimNode>('.node-group').each(function (n) {
+      const isMatch = (n.name || '').toLowerCase().includes(q) ||
+                      (n.id || '').toLowerCase().includes(q) ||
+                      (n.description || '').toLowerCase().includes(q) ||
+                      (n.type || '').toLowerCase().includes(q);
+      matchMap.set(n.id, isMatch);
+
+      d3.select(this).select('.node-circle')
+        .transition().duration(200)
+        .attr('opacity', isMatch ? 1.0 : 0.1)
+        .attr('stroke', isMatch ? 'var(--color-accent-yellow)' : '#555')
+        .attr('stroke-width', isMatch ? 3.0 : 1.0)
+        .attr('filter', isMatch ? 'url(#highlight-glow)' : null);
+
+      d3.select(this).select('.node-glow')
+        .transition().duration(200)
+        .attr('opacity', isMatch ? 0.45 : 0.01)
+        .attr('filter', isMatch ? 'url(#highlight-glow)' : null);
+    });
+
+    svg.selectAll<SVGLineElement, SimLink>('line')
+      .transition().duration(200)
+      .attr('stroke-opacity', l => {
+        const src = typeof l.source === 'object' ? (l.source as SimNode).id : l.source as string;
+        const tgt = typeof l.target === 'object' ? (l.target as SimNode).id : l.target as string;
+        return (matchMap.get(src) && matchMap.get(tgt)) ? 0.8 : 0.02;
+      })
+      .attr('stroke-width', l => {
+        const src = typeof l.source === 'object' ? (l.source as SimNode).id : l.source as string;
+        const tgt = typeof l.target === 'object' ? (l.target as SimNode).id : l.target as string;
+        return (matchMap.get(src) && matchMap.get(tgt)) ? 2.0 : 0.5;
+      });
+  }, [visualSearch, graphRendered]);
 
   // ─── Zoom Controls ─────────────────────────────────────────────────────────
 
@@ -762,6 +1115,30 @@ export default function GraphVisualize() {
         )}
       </AnimatePresence>
 
+      {/* ─── Filter Empty State Overlay ────────────────────────────── */}
+      {graphData && graphData.nodes.length > 0 && (
+        (() => {
+          const visibleNodesCount = graphData.nodes.filter(n => {
+            if (hiddenNodeTypes.has(n.type)) return false;
+            if (selectedRepoFilter && n.repo && n.repo !== selectedRepoFilter) return false;
+            return true;
+          }).length;
+          
+          if (visibleNodesCount === 0) {
+            return (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                <div className="text-center max-w-sm px-6 py-4 rounded-2xl border backdrop-blur-md bg-bg-card/40 border-border/20">
+                  <p className="font-mono text-xs text-text-primary">
+                    No nodes match the current filter settings. Try adjusting the repository filter or enabling some node types in the Legend.
+                  </p>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()
+      )}
+
       {/* ─── Loading State ───────────────────────────────────────────── */}
       <AnimatePresence>
         {loading && (
@@ -834,6 +1211,42 @@ export default function GraphVisualize() {
         )}
       </AnimatePresence>
 
+      {/* ─── Visual Node Search ───────────────────────────────────────── */}
+      {graphData && (
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: graphRendered ? 1 : 0, x: graphRendered ? 0 : -20 }}
+          transition={{ duration: 0.4, delay: 0.25 }}
+          className="absolute top-20 left-6 z-20 w-64"
+        >
+          <div
+            className="flex items-center gap-2 px-3 py-2 rounded-2xl border backdrop-blur-xl transition-all duration-200 focus-within:border-accent-yellow/40"
+            style={{
+              background: 'color-mix(in srgb, var(--color-bg-card) 80%, transparent)',
+              borderColor: 'color-mix(in srgb, var(--color-border) 30%, transparent)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+            }}
+          >
+            <Search size={14} className="text-text-muted shrink-0" />
+            <input
+              type="text"
+              value={visualSearch}
+              onChange={e => setVisualSearch(e.target.value)}
+              placeholder="Search nodes in canvas..."
+              className="flex-1 bg-transparent text-text-primary font-mono text-[11px] outline-none placeholder:text-text-inactive"
+            />
+            {visualSearch && (
+              <button
+                onClick={() => setVisualSearch('')}
+                className="text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+        </motion.div>
+      )}
+
       {/* ─── Zoom Controls ───────────────────────────────────────────── */}
       {graphData && (
         <motion.div
@@ -863,7 +1276,7 @@ export default function GraphVisualize() {
         </motion.div>
       )}
 
-      {/* ─── Legend Panel ────────────────────────────────────────────── */}
+      {/* ─── Legend & Filter Panel ──────────────────────────────────── */}
       {graphData && (
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -872,7 +1285,7 @@ export default function GraphVisualize() {
           className="absolute bottom-20 left-6 z-20"
         >
           <div
-            className="rounded-2xl border backdrop-blur-xl overflow-hidden"
+            className="rounded-2xl border backdrop-blur-xl overflow-hidden w-64"
             style={{
               background: 'color-mix(in srgb, var(--color-bg-card) 80%, transparent)',
               borderColor: 'color-mix(in srgb, var(--color-border) 30%, transparent)',
@@ -884,7 +1297,7 @@ export default function GraphVisualize() {
               className="flex items-center gap-2 px-4 py-2.5 w-full text-left cursor-pointer hover:bg-bg-secondary/30 transition-colors"
             >
               <Info size={14} className="text-text-muted" />
-              <span className="font-mono text-xs font-semibold text-text-primary">Legend</span>
+              <span className="font-mono text-xs font-semibold text-text-primary">Filters & Legend</span>
               <motion.span
                 animate={{ rotate: showLegend ? 180 : 0 }}
                 className="ml-auto text-text-muted shrink-0"
@@ -901,25 +1314,189 @@ export default function GraphVisualize() {
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  <div className="px-4 pb-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
+                  {/* Custom Repo Selector inside the legend/filters panel */}
+                  {(() => {
+                    const availableRepos = [...new Set(graphData.nodes.map(n => n.repo as string).filter(Boolean))].sort();
+                    if (availableRepos.length === 0) return null;
+                    return (
+                      <div className="px-4 pb-3 pt-1 border-b border-border/20">
+                        <label className="block font-mono text-[9px] text-text-muted uppercase tracking-wider mb-1.5">
+                          Filter by Repository
+                        </label>
+                        
+                        {/* Selector Trigger Button */}
+                        <button
+                          onClick={() => setIsRepoDropdownOpen(!isRepoDropdownOpen)}
+                          className="w-full flex items-center justify-between bg-bg-secondary/40 border border-border/30 rounded-lg px-2.5 py-1.5 font-mono text-[11px] text-text-primary outline-none focus:border-accent-yellow/50 transition-all hover:bg-bg-secondary/60 cursor-pointer"
+                        >
+                          <span className="truncate">
+                            {selectedRepoFilter || `All Repositories (${availableRepos.length})`}
+                          </span>
+                          <ChevronDown size={14} className="text-text-muted shrink-0 ml-1.5 transition-transform duration-200" style={{
+                            transform: isRepoDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                          }} />
+                        </button>
+
+                        {/* Collapsible Dropdown Options */}
+                        <AnimatePresence>
+                          {isRepoDropdownOpen && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.15 }}
+                              className="mt-1 border-t border-border/10 overflow-hidden"
+                            >
+                              <div className="py-1 space-y-0.5 max-h-36 overflow-y-auto pr-1">
+                                <button
+                                  onClick={() => {
+                                    setSelectedRepoFilter('');
+                                    setIsRepoDropdownOpen(false);
+                                  }}
+                                  className="w-full text-left px-2.5 py-1.5 rounded-md font-mono text-[11px] text-text-primary hover:bg-bg-secondary/40 transition-colors flex items-center justify-between cursor-pointer"
+                                >
+                                  <span>All Repositories ({availableRepos.length})</span>
+                                  {!selectedRepoFilter && <div className="w-1.5 h-1.5 rounded-full bg-accent-yellow" />}
+                                </button>
+                                {availableRepos.map(repoName => (
+                                  <button
+                                    key={repoName}
+                                    onClick={() => {
+                                      setSelectedRepoFilter(repoName);
+                                      setIsRepoDropdownOpen(false);
+                                    }}
+                                    className="w-full text-left px-2.5 py-1.5 rounded-md font-mono text-[11px] text-text-primary hover:bg-bg-secondary/40 transition-colors flex items-center justify-between cursor-pointer"
+                                  >
+                                    <span className="truncate">{repoName}</span>
+                                    {selectedRepoFilter === repoName && <div className="w-1.5 h-1.5 rounded-full bg-accent-yellow" />}
+                                  </button>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })()}
+
+                  <div className="px-4 pt-3 pb-1 flex items-start gap-1.5">
+                    <Info size={11} className="text-text-muted shrink-0 mt-0.5" />
+                    <p className="font-mono text-[9px] text-text-muted leading-snug">
+                      Click on any legend item below to toggle its visibility in the graph.
+                    </p>
+                  </div>
+
+                  <div className="px-4 py-3 grid grid-cols-2 gap-x-3 gap-y-1.5 border-b border-border/20">
                     {nodeTypes.map((rawType: any) => {
                       const type = rawType as string;
                       const Icon = NODE_ICONS[type];
+                      const isHidden = hiddenNodeTypes.has(type);
                       return (
-                        <div key={type} className="flex items-center gap-2">
+                        <button
+                          key={type}
+                          onClick={() => toggleNodeType(type)}
+                          className="flex items-center gap-2 w-full text-left py-1 px-1.5 rounded-lg hover:bg-bg-secondary/20 transition-all cursor-pointer select-none"
+                          style={{
+                            opacity: isHidden ? 0.4 : 1,
+                          }}
+                        >
                           <div
-                            className="w-3 h-3 rounded-full shrink-0"
+                            className="w-2.5 h-2.5 rounded-full shrink-0 transition-transform duration-200"
                             style={{
                               background: getNodeColor(type),
-                              boxShadow: `0 0 6px ${getNodeColor(type)}40`,
+                              boxShadow: isHidden ? 'none' : `0 0 6px ${getNodeColor(type)}60`,
+                              transform: isHidden ? 'scale(0.8)' : 'scale(1)',
                             }}
                           />
                           {Icon && <Icon size={11} className="text-text-muted shrink-0" />}
-                          <span className="font-mono text-[10px] text-text-muted truncate">{type}</span>
-                        </div>
+                          <span className={`font-mono text-[10px] text-text-muted truncate flex-1 ${isHidden ? 'line-through' : ''}`}>
+                            {type}
+                          </span>
+                        </button>
                       );
                     })}
                   </div>
+
+                  {/* Neighborhood Hops (Only shown when a node is selected) */}
+                  {selectedNode && (
+                    <div className="px-4 pb-3 pt-2.5 border-b border-border/20">
+                      <div className="flex justify-between items-center mb-1.5">
+                        <label className="block font-mono text-[9px] text-text-muted uppercase tracking-wider">
+                          Neighborhood Hops
+                        </label>
+                        <span className="font-mono text-[9px] text-accent-yellow font-bold">
+                          {maxHops === 99 ? 'All' : `${maxHops} Hop${maxHops > 1 ? 's' : ''}`}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="4"
+                        value={maxHops === 99 ? 4 : maxHops}
+                        onChange={e => {
+                          const val = parseInt(e.target.value);
+                          setMaxHops(val === 4 ? 99 : val);
+                        }}
+                        className="w-full h-1 bg-bg-secondary rounded-lg appearance-none cursor-pointer"
+                        style={{ accentColor: 'var(--color-accent-yellow)' }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Collapsible Edge Types Toggle */}
+                  {(() => {
+                    const edgeTypes = [...new Set(graphData.edges.map(e => e.relationship_name || e.relationship || 'RELATED_TO'))].sort();
+                    if (edgeTypes.length === 0) return null;
+                    return (
+                      <div className="relative">
+                        <button
+                          onClick={() => setShowSettingsSections(prev => ({ ...prev, edges: !prev.edges }))}
+                          className="flex items-center gap-2 px-4 py-2 w-full text-left cursor-pointer hover:bg-bg-secondary/30 transition-colors"
+                        >
+                          <span className="font-mono text-[10px] font-semibold text-text-primary">Relationship Types</span>
+                          <motion.span
+                            animate={{ rotate: showSettingsSections.edges ? 180 : 0 }}
+                            className="ml-auto text-text-muted shrink-0"
+                          >
+                            <ChevronDown size={12} />
+                          </motion.span>
+                        </button>
+                        <AnimatePresence>
+                          {showSettingsSections.edges && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="px-4 pb-3 pt-1 space-y-1 max-h-36 overflow-y-auto pr-1"
+                            >
+                              {edgeTypes.map(edgeType => {
+                                const isHidden = hiddenEdgeTypes.has(edgeType);
+                                return (
+                                  <button
+                                    key={edgeType}
+                                    onClick={() => toggleEdgeType(edgeType)}
+                                    className="flex items-center gap-2 w-full text-left py-1 px-1.5 rounded-lg hover:bg-bg-secondary/20 transition-all cursor-pointer select-none"
+                                    style={{ opacity: isHidden ? 0.4 : 1 }}
+                                  >
+                                    <div
+                                      className="w-1.5 h-1.5 rounded-full shrink-0"
+                                      style={{
+                                        background: isHidden ? 'var(--color-text-inactive)' : '#A9C7D0',
+                                        boxShadow: isHidden ? 'none' : '0 0 4px #A9C7D060'
+                                      }}
+                                    />
+                                    <span className={`font-mono text-[9px] text-text-muted truncate flex-1 ${isHidden ? 'line-through' : ''}`}>
+                                      {edgeType}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })()}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1072,6 +1649,50 @@ export default function GraphVisualize() {
                       {selectedNode.description}
                     </p>
                   )}
+
+                  {/* Prune Module Button */}
+                  {selectedNode.type === 'Module' && selectedNode.repo && (
+                    <button
+                      onClick={() => pruneModule(selectedNode)}
+                      disabled={pruning}
+                      className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 font-mono text-[10px] font-semibold transition-all hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      {pruning ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <X size={12} className="text-red-400" />
+                      )}
+                      <span>{pruning ? 'Pruning...' : 'Prune/Forget Module'}</span>
+                    </button>
+                  )}
+
+                  {/* Focus Neighbors Toggle */}
+                  <button
+                    onClick={() => setMaxHops(maxHops === 1 ? 99 : 1)}
+                    className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border font-mono text-[10px] font-semibold transition-all duration-200 cursor-pointer"
+                    style={{
+                      background: maxHops === 1 ? 'color-mix(in srgb, var(--color-accent-mint) 15%, var(--color-bg-card))' : 'var(--color-btn-dark)',
+                      borderColor: maxHops === 1 ? 'var(--color-accent-mint) 50%' : 'color-mix(in srgb, var(--color-border) 30%, transparent)',
+                      color: maxHops === 1 ? 'var(--color-accent-mint)' : 'var(--color-text-primary)',
+                    }}
+                  >
+                    <Eye size={12} className={maxHops === 1 ? "text-accent-mint" : "text-text-muted"} />
+                    <span>{maxHops === 1 ? 'Show All Connections' : 'Focus / Isolate Neighbors'}</span>
+                  </button>
+
+                  {/* Collapsible Key-Value properties list */}
+                  <div className="mt-3 pt-3 border-t border-border/20">
+                    <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                      {Object.entries(selectedNode)
+                        .filter(([k]) => !['x', 'y', 'vx', 'vy', 'fx', 'fy', 'index', 'connectionCount', 'id', 'name', 'type', 'description', 'repo', 'dataset'].includes(k))
+                        .map(([key, val]) => (
+                          <div key={key} className="flex items-start gap-2 text-[9px] font-mono leading-tight">
+                            <span className="text-text-muted shrink-0 w-24 truncate">{key}:</span>
+                            <span className="text-text-primary break-all flex-1">{String(val)}</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
                 </div>
                 <button
                   onClick={() => setSelectedNode(null)}

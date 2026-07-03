@@ -208,7 +208,7 @@ const agents = [
   }
 ];
 
-function AgentIcon({ agent, progress }: { agent: typeof agents[0]; progress: any }) {
+function AgentIcon({ agent, progress }: { agent: typeof agents[0]; progress: any; key?: any }) {
   const x = useTransform(progress, [0, 1], [0, agent.dx * (typeof window !== 'undefined' && window.innerWidth < 1024 ? 0.35 : 1)]);
   const y = useTransform(progress, [0, 1], [0, agent.dy * (typeof window !== 'undefined' && window.innerWidth < 1024 ? 0.35 : 1)]);
 
@@ -297,7 +297,7 @@ export function Footer() {
           One Docker command. Any GitHub repo.<br />Connects to Claude Code in under 5 minutes.
         </p>
 
-        <button className="bg-btn-dark text-btn-dark-text text-[14px] md:text-[15px] font-medium px-[32px] py-[16px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer mt-10 hover:bg-[#3a3836]">
+        <button className="bg-btn-dark text-btn-dark-text text-[14px] md:text-[15px] font-medium px-[32px] py-[16px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer mt-10 hover:bg-btn-dark-hover">
           Deploy with Docker
         </button>
 

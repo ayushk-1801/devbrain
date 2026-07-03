@@ -99,7 +99,7 @@ export function Navbar() {
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
-            className="text-text-muted hover:text-text-primary transition-colors cursor-pointer outline-none p-1.5 rounded-full hover:bg-bg-secondary"
+            className="text-text-muted hover:text-text-primary transition-colors cursor-pointer outline-none p-1.5 rounded-full"
             aria-label="Toggle theme"
           >
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
@@ -167,7 +167,7 @@ export function Navbar() {
                 </Link>
               </>
             )}
-            <button className="w-full bg-btn-dark text-btn-dark-text text-[14px] font-medium py-3 rounded-full mt-2 cursor-pointer hover:bg-[#3a3836]">
+            <button className="w-full bg-btn-dark text-btn-dark-text text-[14px] font-medium py-3 rounded-full mt-2 cursor-pointer hover:bg-btn-dark-hover">
               Get Started
             </button>
           </motion.div>

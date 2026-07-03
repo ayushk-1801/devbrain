@@ -116,6 +116,42 @@ async def get_graph_data(repo: str | None = None) -> dict:
     JSON-safe for the REST ``/graph`` endpoint.
     """
     from cognee.infrastructure.databases.graph import get_graph_engine
+    import sqlite3
+    import os
+    from backend.config import settings, split_repo, _safe
+    from backend import registry
+
+    # --- Query node-to-dataset mapping from SQLite -------------------------
+    node_to_dataset: dict[str, str] = {}
+    db_path = os.path.join(settings.COGNEE_SYSTEM_DIR, "databases", "cognee_db")
+    if os.path.exists(db_path):
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT n.label, d.name
+                FROM nodes n
+                JOIN datasets d ON n.dataset_id = d.id
+            """)
+            for label, dataset_name in cursor.fetchall():
+                node_to_dataset[label] = dataset_name
+            conn.close()
+        except Exception as exc:
+            logger.warning("Failed to query node-dataset mapping from SQLite: %s", exc)
+
+    # Reconstruct repo string from dataset name
+    def get_repo_for_dataset(dataset_name: str) -> str | None:
+        if not dataset_name:
+            return None
+        for r in registry.list_repos():
+            try:
+                owner, repo_name = split_repo(r)
+                prefix = f"repo_{_safe(owner)}_{_safe(repo_name)}_"
+                if dataset_name.startswith(prefix):
+                    return r
+            except Exception:
+                continue
+        return None
 
     graph_engine = await get_graph_engine()
     nodes, edges = await graph_engine.get_graph_data()
@@ -157,6 +193,14 @@ async def get_graph_data(repo: str | None = None) -> dict:
                 for k, v in node.__dict__.items():
                     if k not in n:
                         n[k] = str(v) if not isinstance(v, (str, int, float, bool, type(None))) else v
+
+        # Enrich node with dataset and repo properties
+        dataset = node_to_dataset.get(n["id"])
+        if dataset:
+            n["dataset"] = dataset
+            node_repo = get_repo_for_dataset(dataset)
+            if node_repo:
+                n["repo"] = node_repo
         serialized_nodes.append(n)
 
     # --- Serialise edges ---------------------------------------------------
@@ -200,6 +244,34 @@ async def get_graph_data(repo: str | None = None) -> dict:
                         e[k] = str(v) if not isinstance(v, (str, int, float, bool, type(None))) else v
         serialized_edges.append(e)
 
+    # --- Apply backend repo filtering if requested -------------------------
+    if repo:
+        try:
+            owner, repo_name = split_repo(repo)
+            prefix = f"repo_{_safe(owner)}_{_safe(repo_name)}_"
+            
+            filtered_nodes = []
+            for n in serialized_nodes:
+                node_repo = n.get("repo")
+                node_dataset = n.get("dataset")
+                if node_repo == repo or (node_dataset and node_dataset.startswith(prefix)):
+                    filtered_nodes.append(n)
+                elif not node_repo and not node_dataset:
+                    # Fallback check for safe repo name match in fields
+                    safe_r = f"{_safe(owner)}_{_safe(repo_name)}"
+                    if safe_r in n["id"].lower() or safe_r in n["name"].lower():
+                        filtered_nodes.append(n)
+            
+            valid_node_ids = {n["id"] for n in filtered_nodes}
+            filtered_edges = [
+                e for e in serialized_edges
+                if e["source"] in valid_node_ids and e["target"] in valid_node_ids
+            ]
+            return {"nodes": filtered_nodes, "edges": filtered_edges}
+        except Exception as exc:
+            logger.warning("Error filtering by repo in backend: %s", exc)
+
     return {"nodes": serialized_nodes, "edges": serialized_edges}
+
 
 

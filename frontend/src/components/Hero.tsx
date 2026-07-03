@@ -33,7 +33,7 @@ export function Hero() {
           code exists - get sourced answers in seconds.
         </p>
          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mt-10 w-full sm:w-auto px-4 sm:px-0">
-          <button className="bg-btn-dark text-btn-dark-text text-[14px] md:text-[15px] font-medium px-6 py-[14px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer hover:bg-[#3a3836] text-center">
+          <button className="bg-btn-dark text-btn-dark-text text-[14px] md:text-[15px] font-medium px-6 py-[14px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer hover:bg-btn-dark-hover text-center">
             Explore the graph
           </button>
           <button className="bg-transparent border-[1.5px] border-border text-text-primary text-[14px] md:text-[15px] font-medium px-6 py-[14px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer hover:bg-bg-secondary text-center">
