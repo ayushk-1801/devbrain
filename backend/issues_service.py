@@ -43,6 +43,56 @@ async def create_issue(
         "url": issue.html_url,
     }
 
+def _serialize_timeline_event(event) -> dict[str, Any]:
+    out = {
+        "id": getattr(event, "id", None),
+        "event": getattr(event, "event", None),
+        "actor": event.actor.login if getattr(event, "actor", None) else None,
+        "created_at": event.created_at.isoformat() if getattr(event, "created_at", None) else None,
+    }
+    # Extract commit details if available
+    if getattr(event, "commit_id", None):
+        out["commit_id"] = event.commit_id
+    # Extract source details (for cross-referenced, etc.)
+    source = getattr(event, "source", None)
+    if source:
+        source_issue = getattr(source, "issue", None)
+        if source_issue:
+            out["source_issue"] = {
+                "number": source_issue.number,
+                "title": source_issue.title,
+                "url": source_issue.html_url,
+                "is_pr": source_issue.pull_request is not None,
+            }
+    # Extract project card details if available
+    project_card = getattr(event, "project_card", None)
+    if project_card:
+        out["project_card"] = {
+            "id": getattr(project_card, "id", None),
+            "url": getattr(project_card, "url", None),
+            "project_id": getattr(project_card, "project_id", None),
+            "project_url": getattr(project_card, "project_url", None),
+            "column_name": getattr(project_card, "column_name", None),
+        }
+    return out
+
+
+def _serialize_issue_event(event) -> dict[str, Any]:
+    out = {
+        "id": getattr(event, "id", None),
+        "event": getattr(event, "event", None),
+        "actor": event.actor.login if getattr(event, "actor", None) else None,
+        "created_at": event.created_at.isoformat() if getattr(event, "created_at", None) else None,
+    }
+    if getattr(event, "commit_id", None):
+        out["commit_id"] = event.commit_id
+    if getattr(event, "label", None):
+        out["label"] = event.label.name
+    if getattr(event, "assignee", None):
+        out["assignee"] = event.assignee.login
+    return out
+
+
 async def get_issue(repo: str, number: int) -> dict[str, Any]:
     gh_repo = await asyncio.to_thread(_get_repo, repo)
     issue = await asyncio.to_thread(gh_repo.get_issue, number)
@@ -51,48 +101,215 @@ async def get_issue(repo: str, number: int) -> dict[str, Any]:
     title = issue.title
     body = issue.body or ""
     state = issue.state
-    labels = [l.name for l in issue.labels]
-    assignees = [a.login for a in issue.assignees]
-    author = issue.user.login if issue.user else "unknown"
-    created_at = issue.created_at.isoformat()
-    updated_at = issue.updated_at.isoformat()
     
+    # 1. Author
+    author = issue.user.login if issue.user else "unknown"
+    
+    # 2. Created & Updated
+    created_at = issue.created_at.isoformat() if issue.created_at else None
+    updated_at = issue.updated_at.isoformat() if issue.updated_at else None
+    
+    # 3. Metadata
+    metadata = {
+        "locked": getattr(issue, "locked", False),
+        "active_lock_reason": getattr(issue, "active_lock_reason", None),
+        "comments_count": getattr(issue, "comments", 0),
+        "closed_at": issue.closed_at.isoformat() if getattr(issue, "closed_at", None) else None,
+        "closed_by": issue.closed_by.login if getattr(issue, "closed_by", None) else None,
+        "draft": getattr(issue, "draft", None),
+        "html_url": issue.html_url,
+        "url": issue.url,
+    }
+
+    # 4. Comments (with reactions count if available in raw_data)
     comments = []
     for c in await asyncio.to_thread(lambda: list(issue.get_comments())):
+        c_reactions = {}
+        if c.raw_data and "reactions" in c.raw_data:
+            for k, v in c.raw_data["reactions"].items():
+                if k != "url":
+                    c_reactions[k] = v
+        
         comments.append({
             "id": c.id,
             "author": c.user.login if c.user else "unknown",
             "body": c.body,
-            "created_at": c.created_at.isoformat(),
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+            "reactions": c_reactions,
         })
 
+    # 5. Timeline, Linked PRs, Linked commits, Project
     linked_prs = []
     linked_commits = []
+    serialized_timeline = []
+    project_info = None
+
     try:
         timeline = await asyncio.to_thread(lambda: list(issue.get_timeline()))
         for event in timeline:
-            if event.event == "referenced" and event.commit_id:
+            serialized_timeline.append(_serialize_timeline_event(event))
+            
+            # Extract linked commits and PRs
+            if event.event == "referenced" and getattr(event, "commit_id", None):
                 linked_commits.append(event.commit_id)
-            elif event.event == "cross-referenced" and event.source and event.source.type == "issue" and event.source.issue:
-                if getattr(event.source.issue, "pull_request", None):
-                    linked_prs.append(event.source.issue.number)
+            elif event.event == "cross-referenced" and getattr(event, "source", None):
+                source = event.source
+                if source and getattr(source, "type", None) == "issue" and getattr(source, "issue", None):
+                    src_issue = source.issue
+                    if getattr(src_issue, "pull_request", None):
+                        linked_prs.append({
+                            "number": src_issue.number,
+                            "title": src_issue.title,
+                            "state": src_issue.state,
+                            "url": src_issue.html_url,
+                        })
+                        
+            # Reconstruct project state
+            if event.event in ("added_to_project", "added_to_project_v2", "moved_columns_in_project"):
+                proj_card = getattr(event, "project_card", None) or {}
+                proj_card_raw = event.raw_data.get("project_card") if hasattr(event, "raw_data") else {}
+                
+                proj_name = None
+                proj_id = None
+                proj_url = None
+                column_name = None
+                
+                if proj_card_raw:
+                    proj_id = proj_card_raw.get("project_id")
+                    proj_url = proj_card_raw.get("project_url")
+                    proj_name = proj_card_raw.get("project_name")
+                    column_name = proj_card_raw.get("column_name")
+                elif proj_card:
+                    proj_id = getattr(proj_card, "project_id", None)
+                    proj_url = getattr(proj_card, "project_url", None)
+                    column_name = getattr(proj_card, "column_name", None)
+                
+                # Try to find V2 project info from raw_data
+                if not proj_id and hasattr(event, "raw_data"):
+                    # V2 event structure: project_item, project, etc.
+                    v2_item = event.raw_data.get("project_item") or event.raw_data.get("project") or {}
+                    if v2_item:
+                        proj_id = v2_item.get("id")
+                        proj_name = v2_item.get("title") or v2_item.get("name")
+                        proj_url = v2_item.get("url")
+                
+                project_info = {
+                    "id": proj_id,
+                    "name": proj_name or (f"Project #{proj_id}" if proj_id else "Unknown Project"),
+                    "url": proj_url,
+                    "column": column_name,
+                }
+            elif event.event in ("removed_from_project", "removed_from_project_v2"):
+                project_info = None
     except Exception:
         pass
+
+    # Deduplicate linked PRs
+    unique_prs = {}
+    for pr in linked_prs:
+        unique_prs[pr["number"]] = pr
+    linked_prs = list(unique_prs.values())
+    linked_commits = list(set(linked_commits))
+
+    # 6. Events
+    serialized_events = []
+    try:
+        events = await asyncio.to_thread(lambda: list(issue.get_events()))
+        for event in events:
+            serialized_events.append(_serialize_issue_event(event))
+    except Exception:
+        pass
+
+    # 7. Assignees
+    assignees = [
+        {
+            "login": a.login,
+            "avatar_url": a.avatar_url,
+            "html_url": a.html_url
+        }
+        for a in issue.assignees
+    ]
+
+    # 8. Labels
+    labels = [
+        {
+            "name": l.name,
+            "color": l.color,
+            "description": l.description
+        }
+        for l in issue.labels
+    ]
+
+    # 9. Milestone
+    milestone = None
+    if issue.milestone:
+        milestone = {
+            "title": issue.milestone.title,
+            "number": issue.milestone.number,
+            "state": issue.milestone.state,
+            "description": issue.milestone.description,
+            "due_on": issue.milestone.due_on.isoformat() if issue.milestone.due_on else None,
+        }
+
+    # 10. Reactions
+    reactions_summary = {}
+    raw_reactions = issue.raw_data.get("reactions") if issue.raw_data else None
+    if raw_reactions:
+        for k, v in raw_reactions.items():
+            if k != "url":
+                reactions_summary[k] = v
+    else:
+        reactions_summary = {
+            "total_count": 0,
+            "+1": 0,
+            "-1": 0,
+            "laugh": 0,
+            "confused": 0,
+            "heart": 0,
+            "hooray": 0,
+            "rocket": 0,
+            "eyes": 0
+        }
+    
+    detailed_reactions = []
+    try:
+        for r in await asyncio.to_thread(lambda: list(issue.get_reactions())):
+            detailed_reactions.append({
+                "id": r.id,
+                "content": r.content,
+                "user": r.user.login if r.user else "unknown",
+                "created_at": r.created_at.isoformat() if r.created_at else None
+            })
+    except Exception:
+        pass
+    
+    reactions = {
+        "summary": reactions_summary,
+        "details": detailed_reactions
+    }
 
     return {
         "number": issue.number,
         "title": title,
         "body": body,
         "state": state,
-        "labels": labels,
-        "assignees": assignees,
+        "created": created_at,
+        "updated": updated_at,
         "author": author,
-        "created_at": created_at,
-        "updated_at": updated_at,
+        "metadata": metadata,
         "comments": comments,
-        "linked_prs": list(set(linked_prs)),
-        "linked_commits": list(set(linked_commits)),
+        "timeline": serialized_timeline,
+        "events": serialized_events,
+        "linked_prs": linked_prs,
+        "linked_commits": linked_commits,
+        "assignees": assignees,
+        "labels": labels,
+        "milestone": milestone,
+        "project": project_info,
+        "reactions": reactions,
     }
+
 
 async def update_issue(
     repo: str,

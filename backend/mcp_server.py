@@ -218,7 +218,12 @@ async def create_issue(
 
 @mcp.tool()
 async def get_issue(repo: str, number: int) -> dict:
-    """Get details of a specific issue, including timeline, linked PRs/commits, and comments.
+    """Get comprehensive details of a specific issue.
+
+    Returns the complete structured information for an issue in a single call,
+    including Metadata, Comments (with reactions), Timeline events, Issue events,
+    Linked PRs, Linked commits, Assignees, Labels, Milestone, Project info,
+    Reactions summary & details, State, Created/Updated timestamps, and Author.
 
     Args:
         repo: Repository as "owner/repo".
