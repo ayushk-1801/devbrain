@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "devbrain": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "-m",
+        "backend.mcp_server"
+      ],
+      "env": {
+        "DEVBRAIN_API_URL": "http://localhost:8100"
+      }
+    }
+  }
+}

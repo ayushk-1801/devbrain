@@ -261,9 +261,17 @@ export default function GraphVisualize() {
       const res = await fetch(`${cleanUrl}/query?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      const answer =
-        typeof data === 'string' ? data
-        : data.answer ?? data.result ?? data.text ?? JSON.stringify(data, null, 2);
+      
+      const rawAnswer = data.answer ?? data.result ?? data.text ?? data;
+      let answer = '';
+      if (typeof rawAnswer === 'string') {
+        answer = rawAnswer;
+      } else if (rawAnswer && typeof rawAnswer === 'object') {
+        answer = rawAnswer.text ?? rawAnswer.answer ?? rawAnswer.result ?? JSON.stringify(rawAnswer, null, 2);
+      } else {
+        answer = String(rawAnswer);
+      }
+      
       setQueryResult(answer);
     } catch (err) {
       setQueryError(err instanceof Error ? err.message : 'Query failed');
@@ -1671,12 +1679,12 @@ export default function GraphVisualize() {
                     onClick={() => setMaxHops(maxHops === 1 ? 99 : 1)}
                     className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border font-mono text-[10px] font-semibold transition-all duration-200 cursor-pointer"
                     style={{
-                      background: maxHops === 1 ? 'color-mix(in srgb, var(--color-accent-mint) 15%, var(--color-bg-card))' : 'var(--color-btn-dark)',
-                      borderColor: maxHops === 1 ? 'var(--color-accent-mint) 50%' : 'color-mix(in srgb, var(--color-border) 30%, transparent)',
-                      color: maxHops === 1 ? 'var(--color-accent-mint)' : 'var(--color-text-primary)',
+                      background: maxHops === 1 ? 'var(--color-accent-mint)' : 'var(--color-btn-dark)',
+                      borderColor: maxHops === 1 ? 'var(--color-accent-mint)' : 'var(--color-btn-dark)',
+                      color: maxHops === 1 ? 'var(--color-btn-dark)' : 'var(--color-btn-dark-text)',
                     }}
                   >
-                    <Eye size={12} className={maxHops === 1 ? "text-accent-mint" : "text-text-muted"} />
+                    <Eye size={12} />
                     <span>{maxHops === 1 ? 'Show All Connections' : 'Focus / Isolate Neighbors'}</span>
                   </button>
 
@@ -1721,11 +1729,11 @@ export default function GraphVisualize() {
               style={{
                 background: queryError
                   ? 'color-mix(in srgb, #FF4444 10%, var(--color-bg-card) 80%)'
-                  : 'color-mix(in srgb, var(--color-accent-mint) 8%, var(--color-bg-card) 85%)',
+                  : 'color-mix(in srgb, var(--color-bg-card) 80%, transparent)',
                 borderColor: queryError
                   ? 'color-mix(in srgb, #FF4444 30%, transparent)'
-                  : 'color-mix(in srgb, var(--color-accent-mint) 30%, transparent)',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+                  : 'color-mix(in srgb, var(--color-border) 30%, transparent)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.08), 0 0 0 1px rgba(255,255,255,0.05) inset',
               }}
             >
               <div className="flex items-start gap-3">

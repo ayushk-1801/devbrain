@@ -107,7 +107,7 @@
 
   /* Text styles */
   .font-display { font-family: var(--font-display); }
-  .font-mono { font-family: var(--font-display) !important; }
+  .font-mono { font-family: var(--font-mono); }
   .font-code { font-family: var(--font-mono); }
 
   /* Utility classes mapped from requirements */

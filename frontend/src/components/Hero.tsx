@@ -24,6 +24,14 @@ export function Hero() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="flex flex-col items-center text-center w-full z-10"
       >
+        {/* Powered by Cognee Badge */}
+        <div className="inline-flex items-center gap-2 bg-bg-secondary border border-border-soft px-3.5 py-1.5 rounded-full mb-8 shadow-xs select-none">
+          <span className="text-[11px] font-bold tracking-wider text-text-muted uppercase font-mono">
+            Powered by
+          </span>
+          <img src="/cognee-logo.png" alt="Cognee Logo" className="h-4.5 w-auto object-contain" />
+        </div>
+
         <h1 className="font-display text-[48px] md:text-[64px] lg:text-[70px] font-black text-text-primary leading-[1.05] max-w-[900px] tracking-tight">
           Your Codebase Has a<br />Memory. Ask It Anything.
         </h1>
