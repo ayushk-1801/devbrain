@@ -203,6 +203,32 @@ async def changelog_generate(
     }
 
 
+@app.post("/changelog/backfill")
+async def changelog_backfill(
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    """Manually trigger historical backfilling of the Redis user profiles.
+
+    Retrieves all past commits, PRs, comments, and reviews for a repo
+    and populates Redis file ownership, mentions, and file touches.
+    """
+    try:
+        owner, name = split_repo(repo)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    try:
+        await cl_profile.backfill_profiles(repo)
+        return {
+            "repo": repo,
+            "status": "success",
+            "message": "Historical profile backfill completed successfully.",
+        }
+    except Exception as exc:
+        logger.exception("Failed to run backfill for %s", repo)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @app.get("/changelog")
 async def changelog_read(
     repo: str = Query(..., description="owner/repo"),
