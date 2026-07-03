@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "devbrain": {
+      "type": "local",
+      "command": [
+        "D:/PROjects/devbrain/.venv/Scripts/python.exe",
+        "-m",
+        "backend.mcp_server"
+      ],
+      "cwd": "D:/PROjects/devbrain",
+      "timeout": 300000,
+      "environment": {
+        "DEVBRAIN_API_URL": "http://localhost:8000"
+      },
+      "enabled": true
+    }
+  }
+}

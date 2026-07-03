@@ -79,16 +79,25 @@ async def enqueue_pr_review(repo: str, pr_number: int, review_id: int) -> str:
 
 async def get_job_status(job_id: str) -> dict[str, Any]:
     """Return the current status and result of a queued job."""
-    from arq.jobs import Job, JobStatus
+    from arq.jobs import Job, JobStatus, DeserializationError
     queue = await get_queue()
     job = Job(job_id, redis=queue)
     status = await job.status()
     result: dict[str, Any] = {"job_id": job_id, "status": status.value}
     if status == JobStatus.complete:
-        info = await job.result_info()
-        if info:
-            result["result"] = info.result
-            result["success"] = info.success if hasattr(info, "success") else True
+        try:
+            info = await job.result_info()
+            if info:
+                success = info.success if hasattr(info, "success") else True
+                if success:
+                    result["result"] = info.result
+                    result["success"] = True
+                else:
+                    result["success"] = False
+                    result["error"] = str(info.result)
+        except DeserializationError as exc:
+            result["success"] = False
+            result["error"] = f"Job failed with a non-deserializable exception: {exc}"
     await queue.aclose()
     return result
 
@@ -108,6 +117,9 @@ async def full_sync(repo: str, sync_history_days: int | None = None) -> dict[str
         "releases": await releases.ingest_all_releases(owner, name),
     }
     registry.add_repo(repo)
+    # Automatically backfill historical mentions, touches, and ownership to build personal inboxes
+    from backend.changelog.profile import backfill_profiles
+    await backfill_profiles(repo)
     return {"repo": repo, "ingested": counts}
 
 

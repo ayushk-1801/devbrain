@@ -603,3 +603,153 @@ async def update_from_issue(repo: str, payload: dict) -> None:
         timestamp=timestamp,
         exclude_user=author,
     )
+
+
+async def backfill_profiles(repo: str) -> None:
+    """Historically backfill file ownership, mentions, and touches from commits and PRs."""
+    owner, name = split_repo(repo)
+    logger.info("Starting historical profile backfill for %s", repo)
+    
+    r = await _redis()
+    
+    try:
+        from backend.config import github_client
+        gh = github_client()
+        gh_repo = await asyncio.to_thread(gh.get_repo, repo)
+        
+        # 1. Commits (build file ownership and touches)
+        commits = await asyncio.to_thread(lambda: list(gh_repo.get_commits()))
+        # Reverse to process chronologically (correct ownership progression)
+        commits.reverse()
+        
+        for commit in commits:
+            sha = commit.sha
+            msg = commit.commit.message
+            author = (commit.author.login if commit.author else "unknown").lower()
+            date = commit.commit.author.date
+            if date.tzinfo is None:
+                date = date.replace(tzinfo=timezone.utc)
+            url = commit.html_url
+            
+            # Changed files
+            files = [f.filename for f in commit.files]
+            
+            if author != "unknown" and files:
+                await r.sadd(_k_files(repo, author), *files)
+                await r.sadd(_k_users(repo), author)
+                
+            # Scan message for mentions
+            mentioned = scan_mentions(msg)
+            for username in mentioned:
+                if username.lower() != author:
+                    context = _context_snippet(msg, username)
+                    await _record_mention(
+                        repo=repo,
+                        username=username,
+                        source_type="commit_message",
+                        source_id=sha,
+                        source_url=url,
+                        context=context,
+                        mentioned_by=author,
+                        timestamp=date,
+                    )
+                    
+            # Check touches by others
+            known_users = [u.lower() for u in await r.smembers(_k_users(repo))]
+            for other_user in known_users:
+                if other_user == author:
+                    continue
+                owned = await get_owned_files(repo, other_user)
+                overlapping = set(files) & set(owned)
+                for filepath in overlapping:
+                    await _record_file_touch(
+                        repo=repo,
+                        username=other_user,
+                        filepath=filepath,
+                        changed_by=author,
+                        commit_sha=sha,
+                        commit_url=url,
+                        commit_message=msg.split("\n")[0],
+                        timestamp=date,
+                    )
+                    
+        # 2. PRs (extract PR description/review/comment mentions)
+        pulls = await asyncio.to_thread(lambda: list(gh_repo.get_pulls(state="all")))
+        for pr in pulls:
+            pr_number = pr.number
+            author = (pr.user.login if pr.user else "unknown").lower()
+            pr_url = pr.html_url
+            pr_date = pr.created_at
+            if pr_date.tzinfo is None:
+                pr_date = pr_date.replace(tzinfo=timezone.utc)
+                
+            # PR body
+            body_text = f"{pr.title} {pr.body or ''}"
+            mentioned = scan_mentions(body_text)
+            for username in mentioned:
+                if username.lower() != author:
+                    context = _context_snippet(body_text, username)
+                    await _record_mention(
+                        repo=repo,
+                        username=username,
+                        source_type="pr_body",
+                        source_id=str(pr_number),
+                        source_url=pr_url,
+                        context=context,
+                        mentioned_by=author,
+                        timestamp=pr_date,
+                    )
+                    
+            # Issue comments
+            comments = await asyncio.to_thread(lambda: list(pr.get_issue_comments()))
+            for comment in comments:
+                c_author = (comment.user.login if comment.user else "unknown").lower()
+                c_date = comment.created_at
+                if c_date.tzinfo is None:
+                    c_date = c_date.replace(tzinfo=timezone.utc)
+                c_text = comment.body or ""
+                mentioned = scan_mentions(c_text)
+                for username in mentioned:
+                    if username.lower() != c_author:
+                        context = _context_snippet(c_text, username)
+                        await _record_mention(
+                            repo=repo,
+                            username=username,
+                            source_type="pr_review_comment",
+                            source_id=str(comment.id),
+                            source_url=comment.html_url,
+                            context=context,
+                            mentioned_by=c_author,
+                            timestamp=c_date,
+                        )
+                        
+            # PR reviews
+            reviews = await asyncio.to_thread(lambda: list(pr.get_reviews()))
+            for review in reviews:
+                reviewer = (review.user.login if review.user else "unknown").lower()
+                r_date = review.submitted_at or pr_date
+                if r_date.tzinfo is None:
+                    r_date = r_date.replace(tzinfo=timezone.utc)
+                r_text = review.body or ""
+                
+                if reviewer != "unknown":
+                    await r.sadd(_k_prs(repo, reviewer), str(pr_number))
+                    await r.sadd(_k_users(repo), reviewer)
+                    
+                mentioned = scan_mentions(r_text)
+                for username in mentioned:
+                    if username.lower() != reviewer:
+                        context = _context_snippet(r_text, username)
+                        await _record_mention(
+                            repo=repo,
+                            username=username,
+                            source_type="pr_review",
+                            source_id=str(pr_number),
+                            source_url=review.html_url or pr_url,
+                            context=context,
+                            mentioned_by=reviewer,
+                            timestamp=r_date,
+                        )
+        logger.info("Historical profile backfill for %s completed successfully", repo)
+    except Exception as e:
+        logger.error("Failed to backfill profiles for %s: %s", repo, e)

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "devbrain": {
+      "command": "docker",
+      "args": ["compose", "run", "--rm", "-i", "-T", "devbrain-mcp"],
+      "cwd": "D:\\PROjects\\devbrain"
+    }
+  }
+}

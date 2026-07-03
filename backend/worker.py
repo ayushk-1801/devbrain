@@ -163,6 +163,8 @@ class WorkerSettings:
     keep_result = 3600 * 24
     # Retry failed jobs once before marking them failed.
     max_tries = 2
+    # Allow jobs to run for up to 30 minutes (helps with rate-limit retry backoffs)
+    job_timeout = 1800
     # Allow ingestion and query tasks to run concurrently in the same process.
     # Queries share the single Kuzu connection opened at startup and never wait
     # behind an in-progress ingestion job.
