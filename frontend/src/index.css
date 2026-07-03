@@ -114,6 +114,10 @@
   .section-padding { padding-top: var(--space-section); padding-bottom: var(--space-section); }
   .content-container { max-width: var(--content-max-width); margin: 0 auto; padding: 0 48px; }
   
+  .visualize-page-container, .visualize-page-container .font-mono {
+    font-family: var(--font-display) !important;
+  }
+
   button:focus-visible, a:focus-visible {
     outline: 2px solid var(--color-border-soft);
     outline-offset: 2px;

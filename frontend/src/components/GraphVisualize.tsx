@@ -966,7 +966,7 @@ export default function GraphVisualize() {
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-bg" ref={containerRef}>
+    <div className="relative w-screen h-screen overflow-hidden bg-bg visualize-page-container" ref={containerRef}>
       {/* ─── SVG Canvas ──────────────────────────────────────────────── */}
       <svg
         ref={svgRef}
