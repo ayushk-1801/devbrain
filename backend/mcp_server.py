@@ -544,6 +544,15 @@ async def list_comments(repo: str, number: int) -> list:
 
 
 def main() -> None:
+    import sys
+    global DEVBRAIN_API_URL
+    for i, arg in enumerate(sys.argv):
+        if arg == "--api-url" and i + 1 < len(sys.argv):
+            DEVBRAIN_API_URL = sys.argv[i + 1].rstrip("/")
+            # Remove from sys.argv so FastMCP doesn't complain about unknown args
+            sys.argv.pop(i) # pop --api-url
+            sys.argv.pop(i) # pop value
+            break
     mcp.run(transport="stdio")
 
 

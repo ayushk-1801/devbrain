@@ -9,3 +9,8 @@ httpx
 pydantic
 arq
 redis
+# Platform service dependencies
+docker
+sqlmodel
+cryptography
+python-jose[cryptography]
