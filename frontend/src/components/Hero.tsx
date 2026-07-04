@@ -1,8 +1,10 @@
 import { motion, useScroll, useTransform } from 'motion/react';
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { GoogleGeminiEffect } from './ui/gemini-effect';
 
 export function Hero() {
+  const navigate = useNavigate();
   const ref = React.useRef(null);
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -44,15 +46,15 @@ export function Hero() {
           Your Codebase Has a<br />Memory. Ask It Anything.
         </h1>
         <p className="font-display text-[16px] md:text-[18px] text-text-muted max-w-[580px] mt-6 leading-[1.7]">
-          DevBrain turns every commit, pull request, and architectural decision
-          into a permanently queryable knowledge graph. Stop guessing why
-          code exists - get sourced answers in seconds.
+          DevBrain turns every commit, pull request, issue, release, and
+          architectural decision into a permanently queryable knowledge graph.
+          Stop guessing why code exists - get sourced answers in seconds.
         </p>
          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mt-10 w-full sm:w-auto px-4 sm:px-0">
-          <button className="bg-btn-dark text-btn-dark-text text-[14px] md:text-[15px] font-medium px-6 py-[14px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer hover:bg-btn-dark-hover text-center">
+          <button onClick={() => navigate('/visualize')} className="bg-btn-dark text-btn-dark-text text-[14px] md:text-[15px] font-medium px-6 py-[14px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer hover:bg-btn-dark-hover text-center">
             Explore the graph
           </button>
-          <button className="bg-transparent border-[1.5px] border-border text-text-primary text-[14px] md:text-[15px] font-medium px-6 py-[14px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer hover:bg-bg-secondary text-center">
+          <button onClick={() => navigate('/docs')} className="bg-transparent border-[1.5px] border-border text-text-primary text-[14px] md:text-[15px] font-medium px-6 py-[14px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer hover:bg-bg-secondary text-center">
             Read the docs
           </button>
         </div>

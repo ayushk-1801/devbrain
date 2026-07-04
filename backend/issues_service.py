@@ -7,8 +7,23 @@ from backend.config import github_client, split_repo
 
 from github.GithubObject import NotSet
 
-def _get_repo(repo: str):
-    gh = github_client()
+def _client_for(token: Optional[str] = None):
+    """Return a PyGithub client for this call.
+
+    When ``token`` is supplied (a per-user PAT forwarded from the MCP layer for
+    attributed write actions), build a one-off client from it so the resulting
+    GitHub action is performed as that user, not as the server's bot account.
+    The token is used in-memory for this call only — never cached or persisted.
+    Falls back to the shared server-side client when no token is given (read
+    endpoints, and any caller that doesn't need per-user attribution).
+    """
+    if token:
+        from github import Github
+        return Github(token)
+    return github_client()
+
+def _get_repo(repo: str, token: Optional[str] = None):
+    gh = _client_for(token)
     owner, name = split_repo(repo)
     return gh.get_repo(f"{owner}/{name}")
 
@@ -21,8 +36,9 @@ async def create_issue(
     labels: list[str] = None,
     assignees: list[str] = None,
     milestone: Optional[int] = None,
+    token: Optional[str] = None,
 ) -> dict[str, Any]:
-    gh_repo = await asyncio.to_thread(_get_repo, repo)
+    gh_repo = await asyncio.to_thread(_get_repo, repo, token)
     
     gh_milestone = NotSet
     if milestone is not None:
@@ -320,8 +336,9 @@ async def update_issue(
     labels: Optional[list[str]] = None,
     milestone: Optional[int] = None,
     assignees: Optional[list[str]] = None,
+    token: Optional[str] = None,
 ) -> dict[str, Any]:
-    gh_repo = await asyncio.to_thread(_get_repo, repo)
+    gh_repo = await asyncio.to_thread(_get_repo, repo, token)
     issue = await asyncio.to_thread(gh_repo.get_issue, number)
     
     kwargs: dict[str, Any] = {}
@@ -350,11 +367,11 @@ async def update_issue(
         "url": issue.html_url,
     }
 
-async def close_issue(repo: str, number: int) -> dict[str, Any]:
-    return await update_issue(repo, number, state="closed")
+async def close_issue(repo: str, number: int, token: Optional[str] = None) -> dict[str, Any]:
+    return await update_issue(repo, number, state="closed", token=token)
 
-async def reopen_issue(repo: str, number: int) -> dict[str, Any]:
-    return await update_issue(repo, number, state="open")
+async def reopen_issue(repo: str, number: int, token: Optional[str] = None) -> dict[str, Any]:
+    return await update_issue(repo, number, state="open", token=token)
 
 # --- Listing & Search ---
 
@@ -425,22 +442,22 @@ async def list_my_issues(repo: str, username: str) -> dict[str, list[dict[str, A
 
 # --- Labels ---
 
-async def add_labels(repo: str, number: int, labels: list[str]) -> list[str]:
-    gh_repo = await asyncio.to_thread(_get_repo, repo)
+async def add_labels(repo: str, number: int, labels: list[str], token: Optional[str] = None) -> list[str]:
+    gh_repo = await asyncio.to_thread(_get_repo, repo, token)
     issue = await asyncio.to_thread(gh_repo.get_issue, number)
     await asyncio.to_thread(issue.add_to_labels, *labels)
     updated_issue = await asyncio.to_thread(gh_repo.get_issue, number)
     return [l.name for l in updated_issue.labels]
 
-async def remove_label(repo: str, number: int, label_name: str) -> list[str]:
-    gh_repo = await asyncio.to_thread(_get_repo, repo)
+async def remove_label(repo: str, number: int, label_name: str, token: Optional[str] = None) -> list[str]:
+    gh_repo = await asyncio.to_thread(_get_repo, repo, token)
     issue = await asyncio.to_thread(gh_repo.get_issue, number)
     await asyncio.to_thread(issue.remove_from_labels, label_name)
     updated_issue = await asyncio.to_thread(gh_repo.get_issue, number)
     return [l.name for l in updated_issue.labels]
 
-async def replace_labels(repo: str, number: int, labels: list[str]) -> list[str]:
-    gh_repo = await asyncio.to_thread(_get_repo, repo)
+async def replace_labels(repo: str, number: int, labels: list[str], token: Optional[str] = None) -> list[str]:
+    gh_repo = await asyncio.to_thread(_get_repo, repo, token)
     issue = await asyncio.to_thread(gh_repo.get_issue, number)
     await asyncio.to_thread(issue.set_labels, *labels)
     updated_issue = await asyncio.to_thread(gh_repo.get_issue, number)
@@ -458,15 +475,15 @@ async def create_label(repo: str, name: str, color: str, description: str = "") 
 
 # --- Assignment ---
 
-async def assign_issue(repo: str, number: int, assignees: list[str]) -> list[str]:
-    gh_repo = await asyncio.to_thread(_get_repo, repo)
+async def assign_issue(repo: str, number: int, assignees: list[str], token: Optional[str] = None) -> list[str]:
+    gh_repo = await asyncio.to_thread(_get_repo, repo, token)
     issue = await asyncio.to_thread(gh_repo.get_issue, number)
     await asyncio.to_thread(issue.add_to_assignees, *assignees)
     updated_issue = await asyncio.to_thread(gh_repo.get_issue, number)
     return [a.login for a in updated_issue.assignees]
 
-async def unassign_issue(repo: str, number: int, assignees: list[str]) -> list[str]:
-    gh_repo = await asyncio.to_thread(_get_repo, repo)
+async def unassign_issue(repo: str, number: int, assignees: list[str], token: Optional[str] = None) -> list[str]:
+    gh_repo = await asyncio.to_thread(_get_repo, repo, token)
     issue = await asyncio.to_thread(gh_repo.get_issue, number)
     await asyncio.to_thread(issue.remove_from_assignees, *assignees)
     updated_issue = await asyncio.to_thread(gh_repo.get_issue, number)
@@ -479,8 +496,8 @@ async def list_assignees(repo: str) -> list[str]:
 
 # --- Comments ---
 
-async def comment_issue(repo: str, number: int, body: str) -> dict[str, Any]:
-    gh_repo = await asyncio.to_thread(_get_repo, repo)
+async def comment_issue(repo: str, number: int, body: str, token: Optional[str] = None) -> dict[str, Any]:
+    gh_repo = await asyncio.to_thread(_get_repo, repo, token)
     issue = await asyncio.to_thread(gh_repo.get_issue, number)
     comment = await asyncio.to_thread(issue.create_comment, body)
     return {
@@ -490,8 +507,8 @@ async def comment_issue(repo: str, number: int, body: str) -> dict[str, Any]:
         "created_at": comment.created_at.isoformat(),
     }
 
-async def edit_comment(repo: str, comment_id: int, body: str) -> dict[str, Any]:
-    gh_repo = await asyncio.to_thread(_get_repo, repo)
+async def edit_comment(repo: str, comment_id: int, body: str, token: Optional[str] = None) -> dict[str, Any]:
+    gh_repo = await asyncio.to_thread(_get_repo, repo, token)
     comment = await asyncio.to_thread(gh_repo.get_comment, comment_id)
     await asyncio.to_thread(comment.edit, body)
     return {
@@ -501,8 +518,8 @@ async def edit_comment(repo: str, comment_id: int, body: str) -> dict[str, Any]:
         "created_at": comment.created_at.isoformat(),
     }
 
-async def delete_comment(repo: str, comment_id: int) -> dict[str, str]:
-    gh_repo = await asyncio.to_thread(_get_repo, repo)
+async def delete_comment(repo: str, comment_id: int, token: Optional[str] = None) -> dict[str, str]:
+    gh_repo = await asyncio.to_thread(_get_repo, repo, token)
     comment = await asyncio.to_thread(gh_repo.get_comment, comment_id)
     await asyncio.to_thread(comment.delete)
     return {"status": "success", "message": f"Comment {comment_id} deleted."}

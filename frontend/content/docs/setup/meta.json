@@ -1,0 +1,9 @@
+{
+  "title": "Setup & Deployment",
+  "defaultOpen": true,
+  "pages": [
+    "index",
+    "docker",
+    "local"
+  ]
+}

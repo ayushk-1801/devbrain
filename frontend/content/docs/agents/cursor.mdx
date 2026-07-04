@@ -1,0 +1,27 @@
+---
+title: Cursor
+description: Connect Cursor IDE to DevBrain via MCP.
+---
+
+Cursor supports MCP servers natively, allowing it to query DevBrain during development.
+
+## Setup
+
+1. Open Cursor Settings → Features → MCP Servers
+2. Add a new MCP server:
+
+```json
+{
+  "name": "devbrain",
+  "type": "command",
+  "command": "uv",
+  "args": ["--directory", "./cognee-mcp", "run", "cognee-mcp"],
+  "env": {
+    "LLM_API_KEY": "$COGNEE_API_KEY"
+  }
+}
+```
+
+3. Save and restart Cursor
+
+Cursor's AI will now automatically query DevBrain when you ask questions about the codebase history.

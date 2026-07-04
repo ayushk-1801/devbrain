@@ -1,0 +1,18 @@
+---
+title: Overview
+description: Connect DevBrain to AI coding agents via MCP.
+---
+
+# AI Agents
+
+DevBrain exposes a Cognee MCP server that any MCP-compatible agent (Claude Code, Cursor, OpenCode) can connect to. Once connected, the agent can query your codebase's full decision history.
+
+## How It Works
+
+The Cognee MCP server runs on a dedicated port and exposes DevBrain's `recall()` capability as MCP tools. Agents call these tools automatically during their sessions to understand the context behind code changes.
+
+## Supported Agents
+
+- **[Claude Code](./claude-code)** - Anthropic's terminal-based agent
+- **[Cursor](./cursor)** - AI-native IDE with MCP support
+- **[OpenCode](./opencode)** - Open-source terminal coding agent

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { GitCommit, GitPullRequest, FileText, Code2 } from 'lucide-react';
+import { GitCommit, GitPullRequest, FileText, Code2, AlertCircle } from 'lucide-react';
 
 const tabs = [
   { id: 'commits', label: 'Commits', icon: GitCommit, desc: 'Analyze diffs, messages, and authors' },
   { id: 'prs', label: 'Pull Requests', icon: GitPullRequest, desc: 'Review comments and merge lineage' },
   { id: 'adrs', label: 'ADRs', icon: FileText, desc: 'Auto-discover and link decisions' },
-  { id: 'ast', label: 'Code AST', icon: Code2, desc: 'Traverse live call graphs' }
+  { id: 'ast', label: 'Code AST', icon: Code2, desc: 'Traverse live call graphs' },
+  { id: 'issues', label: 'Issues', icon: AlertCircle, desc: 'Track, manage, and reason about issues' }
 ];
 
 const tabContent: Record<string, {title: string, body: string, illustration: React.ReactNode}[]> = {
@@ -874,6 +875,131 @@ const tabContent: Record<string, {title: string, body: string, illustration: Rea
         </svg>
       )
     }
+  ],
+  issues: [
+    {
+      title: "Full Issue Lifecycle",
+      body: "Every issue state change is tracked - opened, labeled, assigned, closed, reopened. The graph preserves the full timeline so you can ask 'what was the fix for the last session timeout bug?' and get a sourced answer.",
+      illustration: (
+        <svg viewBox="0 0 240 160" className="w-full h-full svg-theme">
+          <style>{`
+            .svg-theme {
+              --svg-mint: #2EA44F;
+              --svg-peach: #F05032;
+              --svg-orchid: #8250DF;
+            }
+            .issue-flow { stroke-dasharray: 6 4; animation: flow-issue 2s infinite linear; }
+            @keyframes flow-issue {
+              to { stroke-dashoffset: -10; }
+            }
+          `}</style>
+          <path d="M 20 80 L 60 80" stroke="var(--color-border)" strokeWidth="1.5" />
+          <path d="M 20 80 L 60 80" stroke="var(--svg-mint)" strokeWidth="2" className="issue-flow" opacity="0.8" />
+          <path d="M 100 80 L 140 80" stroke="var(--color-border)" strokeWidth="1.5" />
+          <path d="M 100 80 L 140 80" stroke="var(--svg-orchid)" strokeWidth="2" className="issue-flow" opacity="0.8" />
+          <path d="M 180 80 L 220 80" stroke="var(--color-border)" strokeWidth="1.5" />
+          <path d="M 180 80 L 220 80" stroke="var(--svg-peach)" strokeWidth="2" className="issue-flow" opacity="0.8" />
+          <g transform="translate(10, 80)">
+            <circle cx="0" cy="0" r="10" fill="var(--color-bg)" stroke="var(--svg-mint)" strokeWidth="2" />
+            <circle cx="0" cy="0" r="3" fill="var(--svg-mint)" />
+            <text x="0" y="22" textAnchor="middle" fontSize="8" fontWeight="bold" fill="var(--color-text-muted)">Open</text>
+          </g>
+          <g transform="translate(80, 80)">
+            <rect x="-18" y="-12" width="36" height="24" rx="6" fill="var(--color-bg)" stroke="var(--svg-orchid)" strokeWidth="2" />
+            <circle cx="-8" cy="-3" r="3" fill="none" stroke="var(--color-text-primary)" strokeWidth="1.5" />
+            <path d="M -11 3 C -11 1, -9 0, -7 0 C -5 0, -3 1, -3 3" fill="none" stroke="var(--color-text-primary)" strokeWidth="1.5" />
+            <text x="5" y="3" textAnchor="middle" fontSize="6" fontWeight="bold" fill="var(--color-text-primary)">Assign</text>
+            <text x="0" y="26" textAnchor="middle" fontSize="8" fontWeight="bold" fill="var(--color-text-muted)">Assigned</text>
+          </g>
+          <g transform="translate(160, 80)">
+            <circle cx="0" cy="0" r="12" fill="var(--color-bg)" stroke="var(--svg-peach)" strokeWidth="2" />
+            <text x="0" y="3" textAnchor="middle" fontSize="8" fontWeight="bold" fill="var(--color-text-primary)">Fix</text>
+            <text x="0" y="24" textAnchor="middle" fontSize="8" fontWeight="bold" fill="var(--color-text-muted)">In Progress</text>
+          </g>
+          <g transform="translate(230, 80)">
+            <circle cx="0" cy="0" r="10" fill="var(--color-bg)" stroke="var(--color-text-inactive)" strokeWidth="2" />
+            <polyline points="-4,-2 0,2 5,-4" fill="none" stroke="var(--color-text-inactive)" strokeWidth="2" strokeLinecap="round" />
+            <text x="0" y="22" textAnchor="middle" fontSize="8" fontWeight="bold" fill="var(--color-text-inactive)">Closed</text>
+          </g>
+        </svg>
+      )
+    },
+    {
+      title: "Rich Comment Threads",
+      body: "Every issue comment is stored in the graph with full author attribution and timestamp. Surface past discussions without scrolling through months of GitHub history.",
+      illustration: (
+        <svg viewBox="0 0 240 160" className="w-full h-full svg-theme">
+          <style>{`
+            .svg-theme {
+              --svg-mint: #2EA44F;
+              --svg-peach: #F05032;
+              --svg-orchid: #8250DF;
+            }
+          `}</style>
+          <rect x="20" y="15" width="200" height="130" rx="8" fill="var(--color-bg)" stroke="var(--color-border)" strokeWidth="1" />
+          <line x1="20" y1="40" x2="220" y2="40" stroke="var(--color-border)" strokeWidth="1" />
+          <text x="35" y="30" fontSize="8" fontWeight="bold" fill="var(--color-text-primary)">Issue #42 - Auth timeout bug</text>
+          <rect x="30" y="50" width="180" height="28" rx="4" fill="var(--color-bg)" stroke="var(--color-border)" strokeWidth="1" />
+          <circle cx="40" cy="64" r="6" fill="var(--svg-mint)" stroke="var(--color-border)" strokeWidth="1" />
+          <text x="40" y="66" textAnchor="middle" fontSize="6" fontWeight="bold" fill="#FEFEF3">A</text>
+          <text x="50" y="62" fontSize="7" fontWeight="bold" fill="var(--color-text-primary)">@alice</text>
+          <text x="80" y="62" fontSize="6" fill="var(--color-text-inactive)">2h ago</text>
+          <line x1="50" y1="70" x2="195" y2="70" stroke="var(--color-text-muted)" strokeWidth="2" strokeLinecap="round" />
+          <rect x="30" y="86" width="180" height="28" rx="4" fill="var(--color-bg)" stroke="var(--color-border)" strokeWidth="1" />
+          <circle cx="40" cy="100" r="6" fill="var(--svg-peach)" stroke="var(--color-border)" strokeWidth="1" />
+          <text x="40" y="102" textAnchor="middle" fontSize="6" fontWeight="bold" fill="#FEFEF3">B</text>
+          <text x="50" y="98" fontSize="7" fontWeight="bold" fill="var(--color-text-primary)">@bob</text>
+          <text x="78" y="98" fontSize="6" fill="var(--color-text-inactive)">1h ago</text>
+          <line x1="50" y1="106" x2="160" y2="106" stroke="var(--color-text-muted)" strokeWidth="2" strokeLinecap="round" />
+          <rect x="30" y="122" width="120" height="20" rx="4" fill="var(--color-bg)" stroke="var(--color-border)" strokeWidth="1" opacity="0.5" />
+          <circle cx="40" cy="132" r="5" fill="var(--svg-orchid)" stroke="var(--color-border)" strokeWidth="1" opacity="0.5" />
+          <text x="40" y="133.5" textAnchor="middle" fontSize="5" fontWeight="bold" fill="#FEFEF3" opacity="0.5">C</text>
+          <line x1="49" y1="132" x2="135" y2="132" stroke="var(--color-text-inactive)" strokeWidth="1.5" strokeLinecap="round" opacity="0.3" />
+        </svg>
+      )
+    },
+    {
+      title: "Permission-Aware Actions",
+      body: "Create, update, close, label, and assign issues directly from your AI agent. Actions run as your GitHub account via a fine-grained PAT - never the shared bot token.",
+      illustration: (
+        <svg viewBox="0 0 240 160" className="w-full h-full svg-theme">
+          <style>{`
+            .svg-theme {
+              --svg-mint: #2EA44F;
+              --svg-peach: #F05032;
+            }
+            .token-pulse { animation: pulse-token 2s infinite ease-in-out; }
+            @keyframes pulse-token {
+              0%, 100% { opacity: 0.7; }
+              50% { opacity: 1; filter: drop-shadow(0 0 4px var(--svg-mint)); }
+            }
+          `}</style>
+          <rect x="15" y="15" width="210" height="130" rx="8" fill="var(--color-bg)" stroke="var(--color-border)" strokeWidth="1" />
+          <rect x="15" y="15" width="210" height="28" rx="8" fill="var(--color-bg-card)" />
+          <rect x="15" y="35" width="210" height="8" fill="none" />
+          <circle cx="30" cy="29" r="5" fill="var(--svg-peach)" />
+          <circle cx="45" cy="29" r="5" fill="var(--color-text-inactive)" opacity="0.3" />
+          <circle cx="60" cy="29" r="5" fill="var(--color-text-inactive)" opacity="0.3" />
+          <text x="110" y="32" textAnchor="middle" fontSize="8" fontWeight="bold" fill="var(--color-text-primary)">create_issue</text>
+          <rect x="155" y="22" width="55" height="14" rx="4" fill="none" stroke="var(--svg-mint)" strokeWidth="1.2" className="token-pulse" />
+          <text x="182" y="32" textAnchor="middle" fontSize="6" fontWeight="bold" fill="var(--svg-mint)">your token</text>
+          <rect x="25" y="55" width="190" height="80" rx="4" fill="var(--color-bg)" stroke="var(--color-border)" strokeWidth="1" />
+          <rect x="35" y="65" width="70" height="14" rx="2" fill="var(--color-bg-card)" stroke="var(--color-border)" strokeWidth="1" />
+          <text x="40" y="75" fontSize="7" fontWeight="bold" fill="var(--color-text-primary)">Title:</text>
+          <text x="74" y="75" fontSize="7" fill="var(--color-text-muted)">Fix login timeout</text>
+          <rect x="35" y="85" width="100" height="14" rx="2" fill="var(--color-bg-card)" stroke="var(--color-border)" strokeWidth="1" />
+          <text x="40" y="95" fontSize="7" fontWeight="bold" fill="var(--color-text-primary)">Labels:</text>
+          <rect x="84" y="86" width="25" height="12" rx="3" fill="var(--svg-peach)" opacity="0.3" />
+          <text x="96.5" y="95" textAnchor="middle" fontSize="5.5" fontWeight="bold" fill="var(--svg-peach)">bug</text>
+          <rect x="113" y="86" width="35" height="12" rx="3" fill="var(--svg-mint)" opacity="0.3" />
+          <text x="130.5" y="95" textAnchor="middle" fontSize="5.5" fontWeight="bold" fill="var(--svg-mint)">auth</text>
+          <rect x="35" y="106" width="170" height="20" rx="2" fill="var(--color-bg-card)" stroke="var(--color-border)" strokeWidth="1" />
+          <text x="40" y="112" fontSize="7" fontWeight="bold" fill="var(--color-text-primary)">Body:</text>
+          <line x1="74" y1="114" x2="190" y2="114" stroke="var(--color-text-muted)" strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="40" y1="120" x2="160" y2="120" stroke="var(--color-text-inactive)" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      )
+    },
   ]
 };
 

@@ -1,0 +1,31 @@
+---
+title: Webhooks
+description: Configure GitHub webhooks for real-time DevBrain ingestion.
+---
+
+Register a GitHub webhook to feed DevBrain in real time whenever code is pushed or PRs are merged.
+
+## GitHub Setup
+
+1. Go to your repo **Settings → Webhooks → Add webhook**
+2. **Payload URL:** `https://your-domain/webhook/github`
+3. **Content type:** `application/json`
+4. **Secret:** Same value as `GITHUB_WEBHOOK_SECRET` in `.env`
+5. **Events:** Select `push` and `pull_request`
+6. **Active:** Checked
+
+## Local Development
+
+Use [ngrok](https://ngrok.com) or Cloudflare Tunnel to expose your local FastAPI server:
+
+```bash
+ngrok http 8000
+```
+
+Then use the ngrok URL as the payload URL in the GitHub webhook settings.
+
+## Webhook Handler Behavior
+
+- **Push events:** Incrementally ingests changed files - never triggers a full re-scan
+- **PR events:** Ingests PR description, review comments, approval decisions, linked issues
+- All ingestion runs as a background `asyncio.create_task` - the webhook responds immediately

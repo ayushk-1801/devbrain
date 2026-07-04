@@ -7,11 +7,18 @@
     // No Python, no venv, no dependencies needed — just Docker + the backend URL.
     // Build once: docker build -t devbrain .
     // -----------------------------------------------------------------------
+    // Optional: -e GITHUB_USER_TOKEN=github_pat_... — only needed for tools that
+    // create attributed GitHub content (create_issue, comment_issue, add_labels,
+    // assign_issue, close/reopen_issue, etc). Use a fine-grained PAT scoped to
+    // just the repo(s) you use, with only "Issues: Read and write" and an
+    // expiration date. No fallback to the server's central token: those tools
+    // fail with a clear error if this isn't set. Read/query tools don't need it.
     "devbrain": {
       "type": "local",
       "command": [
         "docker", "run", "--rm", "-i",
         "-e", "DEVBRAIN_API_URL=http://host.docker.internal:8000",
+        // "-e", "GITHUB_USER_TOKEN=github_pat_...",
         "devbrain",
         "python", "-m", "backend.mcp_server"
       ],
@@ -28,7 +35,8 @@
     //   "cwd": "/path/to/devbrain",
     //   "timeout": 120000,
     //   "environment": {
-    //     "DEVBRAIN_API_URL": "http://localhost:8000"
+    //     "DEVBRAIN_API_URL": "http://localhost:8000",
+    //     "GITHUB_USER_TOKEN": "github_pat_..."
     //   },
     //   "enabled": true
     // }

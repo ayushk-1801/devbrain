@@ -1,0 +1,12 @@
+{
+  "title": "API Reference",
+  "defaultOpen": true,
+  "pages": [
+    "index",
+    "query",
+    "ingestion",
+    "issues",
+    "pulls",
+    "git"
+  ]
+}

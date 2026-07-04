@@ -1,0 +1,61 @@
+---
+title: Issues
+description: GitHub issue management endpoints.
+---
+
+DevBrain provides endpoints to create, read, update, and manage GitHub issues directly.
+
+## Create an Issue
+
+```http
+POST /api/issues
+```
+
+```json
+{
+  "repo": "owner/repo-name",
+  "title": "Bug: login fails on Safari",
+  "body": "Steps to reproduce...",
+  "labels": ["bug", "frontend"],
+  "assignees": ["alice"]
+}
+```
+
+## List Issues
+
+```http
+GET /api/issues?repo=owner/repo-name&state=open
+```
+
+### Filters
+
+| Parameter | Description |
+|-----------|-------------|
+| `state` | `open`, `closed`, or `all` |
+| `assignee` | Filter by assignee |
+| `creator` | Filter by creator |
+| `mentioned` | Filter by mentioned user |
+| `labels` | Comma-separated label names |
+
+## Update an Issue
+
+```http
+PATCH /api/issues/{number}
+```
+
+```json
+{
+  "title": "Updated title",
+  "labels": ["bug", "critical"]
+}
+```
+
+## Close / Reopen
+
+```http
+PATCH /api/issues/{number}
+```
+
+```json
+{ "state": "closed" }
+```

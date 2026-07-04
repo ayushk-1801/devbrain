@@ -1,0 +1,43 @@
+---
+title: Local Setup
+description: Run DevBrain locally without Docker.
+---
+
+# Local Setup (No Docker)
+
+## 1. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+## 2. Start Redis
+
+Make sure Redis is running on `localhost:6379`.
+
+```bash
+# macOS
+brew services start redis
+
+# Linux
+sudo systemctl start redis
+
+# Docker (standalone)
+docker run -d -p 6379:6379 redis:7-alpine
+```
+
+## 3. Run the API
+
+```bash
+uvicorn backend.main:app --reload --port 8000
+```
+
+## 4. Run the Worker
+
+In a **separate terminal**:
+
+```bash
+python -m arq backend.worker.WorkerSettings
+```
+
+Both processes must run concurrently. The API enqueues jobs to Redis; the worker picks them up and runs Cognee ingestion.

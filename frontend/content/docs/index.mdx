@@ -5,7 +5,7 @@ description: DevBrain is a living engineering memory for software teams, capturi
 
 # DevBrain
 
-**DevBrain** solves institutional knowledge loss — the "why was this changed?" problem that every engineering team faces. It captures not just what the code looks like, but why it became what it is, and makes that knowledge permanently queryable by both humans and AI coding agents.
+**DevBrain** solves institutional knowledge loss - the "why was this changed?" problem that every engineering team faces. It captures not just what the code looks like, but why it became what it is, and makes that knowledge permanently queryable by both humans and AI coding agents.
 
 ### Core Capability
 
@@ -17,7 +17,7 @@ Ask anything about your codebase's history. Get sourced answers, not guesses, wi
 
 DevBrain uses **Cognee's hybrid graph-vector memory layer**. Every piece of engineering knowledge lives in one of three stores, and all three are queried simultaneously at recall time:
 
-1. **Graph Store (Kuzu/Neo4j):** Houses deep AST (Abstract Syntax Tree) nodes and relationships, call graphs, import dependencies, and PR/commit connections.
+1. **Graph Store (Kuzu/Neo4j):** Houses deep AST nodes, call graphs, import dependencies, and PR/commit connections.
 2. **Vector Store (LanceDB):** Performs semantic/fuzzy matching for concepts and queries.
 3. **Relational Store (SQLite):** Maintains system state and mappings.
 
@@ -32,10 +32,14 @@ graph TD
 
 ---
 
-## Next Steps
+## Documentation Sections
 
-Explore the rest of the documentation to get started:
-
-- [Getting Started / Setup](./setup)
-- [REST API Reference](./api)
-- [Changelog & Profiles](./changelog-system)
+| Section | Description |
+|---------|-------------|
+| [Quickstart](./quickstart) | Get running in under 5 minutes |
+| [Setup & Deployment](./setup) | Docker, local setup, and configuration |
+| [Guides](./guides) | Ingestion, webhooks, and changelog digests |
+| [AI Agents](./agents) | Connect Claude Code, Cursor, or OpenCode |
+| [API Reference](./api) | Full REST API endpoint documentation |
+| [Architecture](./architecture) | System design and graph schema |
+| [FAQ](./faq) | Frequently asked questions |

@@ -1,0 +1,10 @@
+{
+  "title": "AI Agents",
+  "defaultOpen": true,
+  "pages": [
+    "index",
+    "claude-code",
+    "cursor",
+    "opencode"
+  ]
+}

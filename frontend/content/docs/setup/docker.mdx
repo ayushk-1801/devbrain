@@ -1,0 +1,37 @@
+---
+title: Docker Setup
+description: Deploy DevBrain using Docker Compose.
+---
+
+# Docker Setup (Recommended)
+
+Build and start all services with a single command:
+
+```bash
+docker-compose up --build
+```
+
+## Services
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| `redis` | internal | Job queue + changelog/profile state |
+| `devbrain-api` | 8000 | FastAPI REST API + webhook receiver |
+| `devbrain-worker` | - | ARQ worker - runs Cognee ingestion |
+| `devbrain-mcp` | - | MCP server for Claude Code / Cursor |
+
+All Redis state and Cognee Cloud data persist across restarts via Docker volumes.
+
+## First Ingestion
+
+```bash
+curl -X POST "http://localhost:8000/ingest" \
+  -H "Content-Type: application/json" \
+  -d '{"repo": "owner/your-repo", "sync_history_days": 90}'
+```
+
+Check job status:
+
+```bash
+curl "http://localhost:8000/jobs/{job_id}"
+```

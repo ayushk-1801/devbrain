@@ -1,0 +1,56 @@
+---
+title: Changelog & Profiles
+description: Generate personalized developer changelogs from webhook data.
+---
+
+DevBrain builds per-developer profiles from every webhook event and generates personalized changelog digests.
+
+## Architecture
+
+The changelog subsystem uses **two stores**:
+
+- **Redis** - exact structured state (timestamps, subscriptions, profiles)
+- **Cognee Cloud** - semantic NL-queryable knowledge (mentions, file-touch documents)
+
+No flat files are used for state. Rendered Markdown output is written to `.devbrain/changelogs/` but is regenerated on every generate call.
+
+## Subscribe a User
+
+```bash
+curl -X POST "http://localhost:8000/changelog/subscribe" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repo": "owner/your-repo",
+    "username": "alice",
+    "notify_webhook": "https://..."
+  }'
+```
+
+## Generate Digests
+
+```bash
+curl -X POST "http://localhost:8000/changelog/generate?repo=owner/your-repo&notify=true"
+```
+
+This generates:
+- A **global changelog** for the entire repo
+- A **personal digest** per subscribed user
+
+## Read a Digest
+
+```bash
+# Personal digest
+curl "http://localhost:8000/changelog/user/alice?repo=owner/your-repo"
+
+# Global changelog
+curl "http://localhost:8000/changelog?repo=owner/your-repo"
+```
+
+## Profile Data (Zero Extra API Calls)
+
+Every webhook event builds profile data without additional GitHub API calls:
+
+- Files the user has committed to
+- PRs the user has reviewed
+- @mentions (with timestamps and context)
+- File-touch events (with timestamps)

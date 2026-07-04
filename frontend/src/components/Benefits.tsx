@@ -1,13 +1,13 @@
 import { motion, useScroll, useTransform } from 'motion/react';
-import { Cpu, Database, Code2, GitBranch, Sparkles } from 'lucide-react';
+import { Bell, Database, Code2, GitBranch, Sparkles } from 'lucide-react';
 import React from 'react';
 import { Link } from 'react-router-dom';
 
 const benefits = [
   {
-    icon: Cpu,
-    title: "Surgical Memory Pruning",
-    body: "Cleanly dissolve deprecated modules or legacy refactors using the forget() API. Removes subgraphs in real-time while keeping the rest of the memory intact.",
+    icon: Bell,
+    title: "Personalized Changelogs",
+    body: "Never miss an @mention or file change that matters to you. DevBrain tracks who touched what and generates per-user digests - zero extra GitHub API calls needed.",
     bg: "var(--color-accent-peach)",
     zIndex: 5
   },
@@ -28,7 +28,7 @@ const benefits = [
   {
     icon: GitBranch,
     title: "Automated GitHub Sync",
-    body: "Real-time webhook sync captures commits, pull requests, issues, and ADRs. Ingests raw repository events and automatically turns them into structured semantic memory.",
+    body: "Real-time webhook sync captures commits, pull requests, issues, releases, and ADRs. Ingests raw repository events and automatically turns them into structured semantic memory.",
     bg: "var(--color-accent-powder)",
     zIndex: 2
   },

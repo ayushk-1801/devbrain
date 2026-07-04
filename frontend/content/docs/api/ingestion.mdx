@@ -1,0 +1,66 @@
+---
+title: Ingestion
+description: Endpoints for triggering repository ingestion and receiving webhooks.
+---
+
+## Full Historical Sync
+
+```http
+POST /ingest
+```
+
+Initiates a complete sync of a repository's history - commits, PRs, AST, ADRs, releases.
+
+### Request Body
+
+```json
+{
+  "repo": "owner/repo-name",
+  "sync_history_days": 90
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `repo` | string | yes | Repository to ingest |
+| `sync_history_days` | integer | no | How far back to sync (omit for all) |
+
+### Response
+
+```json
+{
+  "job_id": "abc123",
+  "status": "queued",
+  "repo": "owner/repo-name"
+}
+```
+
+## Check Job Status
+
+```http
+GET /jobs/{job_id}
+```
+
+```json
+{
+  "job_id": "abc123",
+  "status": "in_progress|complete|not_found",
+  "result": { }
+}
+```
+
+## Webhook Receiver
+
+```http
+POST /webhook/github
+```
+
+Receives GitHub push and pull_request events for incremental ingestion. Includes signature verification via `GITHUB_WEBHOOK_SECRET`.
+
+## Module Pruning
+
+```http
+DELETE /module/{repo}/{module}
+```
+
+Surgically removes a deprecated module's subgraph from the knowledge graph. Requires an explicit module name - never call without a specific target.

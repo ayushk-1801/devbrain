@@ -1,0 +1,54 @@
+---
+title: Graph Schema
+description: Knowledge graph schema - node types, edge types, and relationship patterns.
+---
+
+DevBrain's knowledge graph uses a rich schema covering commits, PRs, ADRs, code structure, and releases.
+
+## Node Types
+
+| Node | Description | Properties |
+|------|-------------|------------|
+| `Commit` | A git commit | message, author, timestamp, sha |
+| `PullRequest` | A GitHub PR | title, description, state, merge_sha |
+| `Issue` | A GitHub issue | title, description, state, labels |
+| `Developer` | A user | username, email |
+| `File` | A file in the repo | path, language |
+| `Function` | A function definition | name, signature, line_start, line_end |
+| `Class` | A class definition | name, line_start, line_end |
+| `Module` | A code module | name, path |
+| `ADR` | An architecture decision | title, status, date, context |
+| `Review` | A PR review | body, state (approved/changes_requested) |
+| `Release` | A GitHub release | tag_name, version, date |
+| `Tag` | A git tag | name, sha |
+| `Deployment` | A deployment event | environment, status, timestamp |
+
+## Edge Types
+
+| Edge | Source → Target | Meaning |
+|------|----------------|---------|
+| `MODIFIED` | Commit → File | Commit changed this file |
+| `AUTHORED_BY` | Commit → Developer | Developer authored the commit |
+| `CHANGED` | PR → File | PR changed this file |
+| `MOTIVATED_BY` | PR → Issue | PR was motivated by this issue |
+| `APPROVED_BY` | PR → Developer | Developer approved the PR |
+| `CLOSED` | PR → Issue | PR closes this issue |
+| `CALLS` | Function → Function | Function calls another function |
+| `INHERITS` | Class → Class | Class inherits from another class |
+| `DEPENDS_ON` | Module → Module | Module imports or depends on another |
+| `JUSTIFIES` | ADR → Module | ADR justifies a design decision in a module |
+| `SUPERSEDES` | ADR → ADR | ADR supersedes a previous ADR |
+| `TAGGED_BY` | Release → Tag | Release points to a specific tag |
+| `DEPLOYED_FROM` | Deployment → Release | Deployment deploys a release |
+| `REFERENCES` | PR → Issue | PR references an issue |
+
+## Cross-Source Traversal
+
+The graph enables multi-hop queries across sources, e.g.:
+
+```
+"Which modules depend on PaymentGateway
+ and have any of them been modified since the last refactor?"
+```
+
+This query follows `DEPENDS_ON` edges across 3+ hops in the AST graph, then cross-references with the commit graph to find impacted modules.

@@ -1,0 +1,36 @@
+---
+title: FAQ
+description: Frequently asked questions about DevBrain.
+---
+
+## How is DevBrain different from GitHub's built-in search?
+
+GitHub search tells you *what* changed. DevBrain tells you *why* by connecting commits, PR discussions, review comments, and ADRs into a queryable knowledge graph.
+
+## Can I use DevBrain with private repositories?
+
+Yes. DevBrain uses your GitHub PAT for authentication and respects repository access permissions.
+
+## What LLM providers are supported?
+
+DevBrain uses Cognee, which supports OpenAI, Anthropic, and any OpenAI-compatible provider. Configure via `OPENAI_API_KEY` in `.env`.
+
+## Does DevBrain require a GPU?
+
+No. All LLM calls are made via API - no local GPU is required.
+
+## How much does Cognee Cloud cost?
+
+Use code `COGNEE-35` at [cognee.ai](https://cognee.ai) for a free Developer plan ($35 value). Local setups with Kuzu + LanceDB are completely free.
+
+## What languages does AST analysis support?
+
+Python, JavaScript, TypeScript, Go, Rust, Java, C#, PHP, and Ruby via `cognee[codegraph]`.
+
+## Can I run DevBrain without Docker?
+
+Yes. See the [Local Setup](../setup/local) guide. You'll need Python 3.11+ and Redis.
+
+## How often does memory improve itself?
+
+The `cognee.improve()` job runs weekly via cron, pruning stale nodes and strengthening frequently-queried paths.

@@ -1,0 +1,74 @@
+---
+title: Git Operations
+description: Git operations - branch management, commits, and synchronization.
+---
+
+DevBrain provides git operation endpoints for managing branches and commits.
+
+## Create a Branch
+
+```http
+POST /api/git/branch
+```
+
+```json
+{
+  "repo": "owner/repo-name",
+  "name": "feature/new-feature",
+  "from_ref": "main"
+}
+```
+
+## Switch Branch
+
+```http
+POST /api/git/switch
+```
+
+```json
+{
+  "branch": "feature/new-feature",
+  "create": true
+}
+```
+
+## Commit
+
+```http
+POST /api/git/commit
+```
+
+```json
+{
+  "message": "Add user authentication",
+  "add_all": true
+}
+```
+
+## Merge Branches
+
+```http
+POST /api/git/merge
+```
+
+```json
+{
+  "branch": "feature/new-feature",
+  "no_ff": true,
+  "message": "Merge feature: user authentication"
+}
+```
+
+## Sync with Remote
+
+```http
+POST /api/git/sync
+```
+
+```json
+{
+  "branch": "main"
+}
+```
+
+Pulls with rebase, then pushes - keeps history linear.

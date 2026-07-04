@@ -1,0 +1,45 @@
+---
+title: Quickstart
+description: Get DevBrain up and running in under 5 minutes.
+---
+
+Get DevBrain running and querying your codebase's history in minutes.
+
+## 1. Configure Environment
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your secrets:
+
+```bash
+OPENAI_API_KEY=sk-...           # OpenAI / LLM provider key
+GITHUB_TOKEN=ghp_...            # GitHub PAT with repo access
+GITHUB_REPO=owner/your-repo     # Default repo to ingest
+GITHUB_WEBHOOK_SECRET=...       # Webhook signature secret
+```
+
+## 2. Start Services
+
+```bash
+docker-compose up --build
+```
+
+This starts four services: Redis, DevBrain API (port 8000), worker, and MCP server.
+
+## 3. Ingest Repository History
+
+```bash
+curl -X POST "http://localhost:8000/ingest" \
+  -H "Content-Type: application/json" \
+  -d '{"repo": "owner/your-repo", "sync_history_days": 90}'
+```
+
+## 4. Ask Questions
+
+```bash
+curl "http://localhost:8000/query?q=why+was+auth+refactored&repo=owner/your-repo"
+```
+
+That's it. DevBrain is now indexing your codebase's history and decisions into a queryable knowledge graph.

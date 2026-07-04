@@ -1,0 +1,30 @@
+---
+title: Overview
+description: DevBrain REST API reference - endpoints for querying, ingesting, and managing repositories.
+---
+
+# API Reference
+
+The DevBrain FastAPI server exposes endpoints for ingestion, natural language queries, module management, and changelog generation.
+
+## Base URL
+
+```
+http://localhost:8000
+```
+
+## Endpoints at a Glance
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/ingest` | Full historical repo sync |
+| `POST` | `/webhook/github` | GitHub webhook receiver |
+| `GET` | `/query` | Natural language recall |
+| `DELETE` | `/module/{repo}/{module}` | Surgical module pruning |
+| `GET` | `/changelog` | Global changelog |
+| `GET` | `/changelog/user/{username}` | Personal developer digest |
+| `POST` | `/changelog/subscribe` | Subscribe user to digests |
+| `POST` | `/changelog/generate` | Generate changelogs |
+| `GET` | `/jobs/{job_id}` | Check ingestion job status |
+
+See the individual pages for detailed endpoint documentation.
