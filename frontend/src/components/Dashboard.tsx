@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth, PLATFORM_API } from '../context/AuthContext';
 import { Navbar } from './Navbar';
 import InstanceCard, { type Instance } from './InstanceCard';
+import ConfigSheet from './ConfigSheet';
 
 // Skeleton loader for cards
 function CardSkeleton() {
@@ -73,6 +74,16 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [configInstance, setConfigInstance] = useState<Instance | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'running' | 'pending' | 'error'>('all');
+
+  const filteredInstances = instances.filter((i) => {
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'running') return i.status === 'running';
+    if (statusFilter === 'pending') return i.status === 'pending';
+    if (statusFilter === 'error') return i.status === 'error' || i.status === 'stopped';
+    return true;
+  });
 
   const fetchInstances = useCallback(
     async (silent = false) => {
@@ -150,21 +161,13 @@ export default function Dashboard() {
             )}
             <div>
               <h1 className="font-display font-black text-[26px] md:text-[30px] text-text-primary leading-tight">
-                Welcome back,{' '}
-                <span
-                  className="bg-clip-text text-transparent"
-                  style={{
-                    backgroundImage: 'linear-gradient(135deg, var(--color-text-primary), var(--color-text-muted))',
-                  }}
-                >
-                  @{user?.login}
-                </span>
+                Welcome back, @{user?.login}
               </h1>
-              <p className="text-text-muted text-[14px] mt-0.5">
-                {instances.length === 0 && !isLoading
-                  ? 'Create your first DevBrain instance below'
-                  : `${instances.length} instance${instances.length !== 1 ? 's' : ''} running`}
-              </p>
+              {instances.length === 0 && !isLoading && (
+                <p className="text-text-muted text-[14px] mt-0.5">
+                  Create your first DevBrain instance below
+                </p>
+              )}
             </div>
           </div>
 
@@ -200,42 +203,54 @@ export default function Dashboard() {
           >
             {[
               {
+                id: 'all',
                 label: 'Total',
                 value: instances.length,
                 color: 'var(--color-bg-secondary)',
                 isDarkText: false,
               },
               {
+                id: 'running',
                 label: 'Running',
                 value: instances.filter((i) => i.status === 'running').length,
                 color: 'var(--accent-mint)',
                 isDarkText: true,
               },
               {
+                id: 'pending',
                 label: 'Pending',
                 value: instances.filter((i) => i.status === 'pending').length,
                 color: 'var(--accent-yellow)',
                 isDarkText: true,
               },
               {
+                id: 'error',
                 label: 'Error',
                 value: instances.filter((i) => i.status === 'error' || i.status === 'stopped').length,
                 color: 'var(--accent-peach)',
                 isDarkText: true,
               },
-            ].map(({ label, value, color, isDarkText }) => (
-              <div
-                key={label}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full border border-border-soft text-[13px] font-medium transition-colors ${
-                  isDarkText ? 'text-[#040200]' : 'text-text-primary'
-                }`}
-                style={{ background: color }}
-              >
-                <Layers size={12} className={isDarkText ? 'text-[#6B6A5E]' : 'text-text-muted'} />
-                <span className="font-bold">{value}</span>
-                <span className={isDarkText ? 'text-[#6B6A5E]' : 'text-text-muted'}>{label}</span>
-              </div>
-            ))}
+            ].map(({ id, label, value, color, isDarkText }) => {
+              const isActive = statusFilter === id;
+              return (
+                <button
+                  key={label}
+                  onClick={() => setStatusFilter(id as any)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full border text-[13px] font-medium transition-all cursor-pointer duration-150 ${
+                    isActive
+                      ? 'border-text-primary scale-[1.03] shadow-sm font-bold opacity-100 ring-2 ring-text-primary/10'
+                      : 'border-border-soft/60 hover:scale-[1.01] hover:border-border-soft opacity-75 hover:opacity-100'
+                  } ${
+                    isDarkText ? 'text-[#040200]' : 'text-text-primary'
+                  }`}
+                  style={{ background: color }}
+                >
+                  <Layers size={12} className={isDarkText ? 'text-[#6B6A5E]' : 'text-text-muted'} />
+                  <span className="font-bold">{value}</span>
+                  <span className={isDarkText ? 'text-[#6B6A5E]' : 'text-text-muted'}>{label}</span>
+                </button>
+              );
+            })}
           </motion.div>
         )}
 
@@ -276,15 +291,44 @@ export default function Dashboard() {
             </>
           ) : instances.length === 0 ? (
             <EmptyState onCreateClick={() => navigate('/new-instance')} />
+          ) : filteredInstances.length === 0 ? (
+            <div className="col-span-full flex flex-col items-center justify-center py-16 px-6 border border-dashed border-border-soft rounded-2xl bg-bg-card/40">
+              <Layers size={32} className="text-text-muted opacity-50 mb-4" />
+              <h4 className="font-display font-bold text-lg text-text-primary mb-1">
+                No {statusFilter} instances
+              </h4>
+              <p className="text-text-muted text-[13px] text-center mb-5">
+                There are currently no instances in this state.
+              </p>
+              <button
+                onClick={() => setStatusFilter('all')}
+                className="text-[12px] font-bold text-text-primary px-4 py-2 border border-border-soft hover:bg-bg-secondary rounded-full transition-all cursor-pointer"
+              >
+                Clear Filter
+              </button>
+            </div>
           ) : (
-            instances.map((instance) => (
+            filteredInstances.map((instance) => (
               <div key={instance.id}>
-                <InstanceCard instance={instance} onDelete={handleDelete} />
+                <InstanceCard
+                  instance={instance}
+                  onDelete={handleDelete}
+                  onConfigClick={(inst) => setConfigInstance(inst)}
+                />
               </div>
             ))
           )}
         </div>
       </main>
+
+      <AnimatePresence>
+        {configInstance && (
+          <ConfigSheet
+            instance={configInstance}
+            onClose={() => setConfigInstance(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
