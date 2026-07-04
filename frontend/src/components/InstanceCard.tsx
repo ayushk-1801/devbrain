@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Copy, Check, Trash2, AlertTriangle, ExternalLink, Clock, FolderGit2, Settings2, MoreVertical } from 'lucide-react';
+import { Copy, Check, Trash2, AlertTriangle, ExternalLink, Clock, FolderGit2, Settings2, MoreVertical, BookOpen, Link2 } from 'lucide-react';
 
 export interface Instance {
   id: string;
@@ -14,77 +14,10 @@ export interface Instance {
 interface InstanceCardProps {
   instance: Instance;
   onDelete: (id: string) => void;
+  onConfigClick: (instance: Instance) => void;
 }
 
-const AGENTS = [
-  {
-    id: 'claude',
-    name: 'Claude Code',
-    icon: '/claude-ai.svg',
-    description: 'Run this in your project terminal to register DevBrain in Claude Code:',
-    copyText: (url: string) => `claude mcp add devbrain -s project -e DEVBRAIN_API_URL="${url}" -- python -m backend.mcp_server`,
-    mode: 'shell',
-  },
-  {
-    id: 'codex',
-    name: 'Codex',
-    icon: '/codex-color-removebg-preview.png',
-    description: 'Add this to your ~/.codex/config.toml under [mcp_servers.devbrain]:',
-    copyText: (url: string) => `[mcp_servers.devbrain]\ncommand = "python"\nargs = ["-m", "backend.mcp_server"]\nenv = { "DEVBRAIN_API_URL" = "${url}" }`,
-    mode: 'toml',
-  },
-  {
-    id: 'cursor',
-    name: 'Cursor',
-    icon: '/cursor.png',
-    description: 'Add as a Command type in Cursor Settings > Features > MCP:',
-    copyText: (url: string) => `python -m backend.mcp_server --api-url "${url}"`,
-    mode: 'command',
-  },
-  {
-    id: 'zed',
-    name: 'Zed Editor',
-    icon: '/Zed_Editor_Logo.png',
-    description: 'Paste this into your Zed settings.json under "context_servers":',
-    copyText: (url: string) => JSON.stringify({
-      "devbrain": {
-        "command": {
-          "path": "python",
-          "args": ["-m", "backend.mcp_server"],
-          "env": {
-            "DEVBRAIN_API_URL": url
-          }
-        }
-      }
-    }, null, 2),
-    mode: 'json',
-  },
-  {
-    id: 'antigravity',
-    name: 'Antigravity',
-    icon: '/google-antigravity.png',
-    description: 'Run this to connect DevBrain to your Google Antigravity CLI:',
-    copyText: (url: string) => `agy mcp add devbrain -e DEVBRAIN_API_URL="${url}" -- python -m backend.mcp_server`,
-    mode: 'shell',
-  },
-  {
-    id: 'opencode',
-    name: 'OpenCode',
-    icon: '/opencode-logo-removebg-preview.png',
-    description: 'Add this to your global or project opencode.jsonc config file under the "mcp" key:',
-    copyText: (url: string) => JSON.stringify({
-      "devbrain": {
-        "type": "local",
-        "command": ["python", "-m", "backend.mcp_server"],
-        "enabled": true,
-        "environment": {
-          "DEVBRAIN_API_URL": url
-        }
-      }
-    }, null, 2),
-    mode: 'json',
-  }
-];
+
 
 function StatusBadge({ status }: { status: Instance['status'] }) {
   const config = {
@@ -212,104 +145,11 @@ function formatDate(dateStr: string) {
   }
 }
 
-function HighlightedCode({ code, mode }: { code: string; mode: string }) {
-  if (mode === 'json') {
-    const tokens = code.split(/(".*?"|[{}[\]:,]|\d+|true|false)/g);
-    return (
-      <>
-        {tokens.map((token, i) => {
-          if (token.startsWith('"') && token.endsWith('"')) {
-            const nextToken = tokens[i + 1] || '';
-            const isKey = nextToken.trim() === ':';
-            if (isKey) {
-              return <span key={i} className="text-[#3b82f6] dark:text-[#60a5fa] font-semibold">{token}</span>;
-            }
-            return <span key={i} className="text-[#ea580c] dark:text-[#f97316]">{token}</span>;
-          }
-          if (token === 'true' || token === 'false') {
-            return <span key={i} className="text-[#8b5cf6] dark:text-[#a78bfa] font-semibold">{token}</span>;
-          }
-          if (['{', '}', '[', ']', ':', ','].includes(token)) {
-            return <span key={i} className="text-text-muted opacity-80">{token}</span>;
-          }
-          return <span key={i}>{token}</span>;
-        })}
-      </>
-    );
-  }
 
-  if (mode === 'toml') {
-    const lines = code.split('\n');
-    return (
-      <>
-        {lines.map((line, i) => {
-          if (line.trim().startsWith('[') && line.trim().endsWith(']')) {
-            return <div key={i} className="text-[#8b5cf6] dark:text-[#a78bfa] font-semibold">{line}</div>;
-          }
-          const parts = line.split(/(=)/);
-          if (parts.length >= 3) {
-            const key = parts[0];
-            const eq = parts[1];
-            const val = parts.slice(2).join('');
-            
-            const highlightedKey = <span className="text-[#3b82f6] dark:text-[#60a5fa] font-semibold">{key}</span>;
-            
-            const valTokens = val.split(/(".*?"|[{}[\]]|\d+|true|false)/g);
-            const highlightedVal = valTokens.map((token, j) => {
-              if (token.startsWith('"') && token.endsWith('"')) {
-                return <span key={j} className="text-[#ea580c] dark:text-[#f97316]">{token}</span>;
-              }
-              if (['{', '}', '[', ']'].includes(token)) {
-                return <span key={j} className="text-text-muted opacity-80">{token}</span>;
-              }
-              return <span key={j}>{token}</span>;
-            });
 
-            return (
-              <div key={i}>
-                {highlightedKey}
-                <span className="text-text-muted mx-1">{eq}</span>
-                {highlightedVal}
-              </div>
-            );
-          }
-          return <div key={i}>{line}</div>;
-        })}
-      </>
-    );
-  }
-
-  if (mode === 'shell') {
-    const tokens = code.split(/(claude|agy|python|pip|-s|-e|--|DEVBRAIN_API_URL=|\".*?\")/g);
-    return (
-      <>
-        {tokens.map((token, i) => {
-          if (['claude', 'agy', 'python', 'pip'].includes(token)) {
-            return <span key={i} className="text-[#3b82f6] dark:text-[#60a5fa] font-semibold">{token}</span>;
-          }
-          if (['-s', '-e', '--'].includes(token)) {
-            return <span key={i} className="text-[#0891b2] dark:text-[#22d3ee] font-semibold">{token}</span>;
-          }
-          if (token === 'DEVBRAIN_API_URL=') {
-            return <span key={i} className="text-[#8b5cf6] dark:text-[#a78bfa] font-semibold">{token}</span>;
-          }
-          if (token.startsWith('"') && token.endsWith('"')) {
-            return <span key={i} className="text-[#ea580c] dark:text-[#f97316]">{token}</span>;
-          }
-          return <span key={i}>{token}</span>;
-        })}
-      </>
-    );
-  }
-
-  return <>{code}</>;
-}
-
-export default function InstanceCard({ instance, onDelete }: InstanceCardProps) {
+export default function InstanceCard({ instance, onDelete, onConfigClick }: InstanceCardProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [showConfig, setShowConfig] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [selectedAgent, setSelectedAgent] = useState(AGENTS[0]);
 
   const { id, repo, api_url, status, created_at } = instance;
   const repoName = repo.split('/').pop() ?? repo;
@@ -439,15 +279,11 @@ export default function InstanceCard({ instance, onDelete }: InstanceCardProps) 
                   API INSTANCE URL
                 </p>
                 <button
-                  onClick={() => setShowConfig(!showConfig)}
-                  className={`flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-md border transition-all cursor-pointer ${
-                    showConfig
-                      ? 'bg-text-primary border-text-primary text-bg-card'
-                      : 'border-border-soft text-text-muted hover:text-text-primary hover:bg-bg-secondary'
-                  }`}
+                  onClick={() => onConfigClick(instance)}
+                  className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-md border border-border-soft text-text-muted hover:text-text-primary hover:bg-bg-secondary transition-all cursor-pointer"
                 >
-                  <Settings2 size={10} />
-                  <span>Config</span>
+                  <BookOpen size={10} />
+                  <span>Instructions</span>
                 </button>
               </div>
               <div className="flex items-center justify-between gap-2 bg-bg-secondary border border-border-soft rounded-lg px-2 py-0.5 hover:border-text-muted/30 transition-colors duration-150">
@@ -457,83 +293,12 @@ export default function InstanceCard({ instance, onDelete }: InstanceCardProps) 
                   rel="noopener noreferrer"
                   className="text-[10px] font-mono text-text-muted hover:text-text-primary truncate flex items-center gap-1 transition-colors py-0.5"
                 >
-                  <ExternalLink size={10} className="shrink-0 text-text-inactive" />
+                  <Link2 size={10} className="shrink-0 text-text-inactive" />
                   <span className="truncate underline underline-offset-4 decoration-border-soft/60 group-hover:decoration-text-muted transition-colors">{api_url}</span>
                 </a>
                 <CopyButton text={api_url} label="Copy" compact={true} />
               </div>
             </div>
-
-            {/* Expandable Agent Configuration Block */}
-            <AnimatePresence>
-              {showConfig && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  className="overflow-hidden space-y-3"
-                >
-                  <div className="border-t border-border-soft/60 pt-3">
-                    <p className="text-[9px] font-bold text-text-inactive uppercase tracking-wider mb-2 font-mono">
-                      Select Agent
-                    </p>
-                    
-                    {/* Horizontal Agents Grid */}
-                    <div className="grid grid-cols-6 gap-1.5 bg-bg-secondary p-1.5 rounded-lg border border-border-soft/40">
-                      {AGENTS.map((agent) => {
-                        const isSelected = selectedAgent.id === agent.id;
-                        return (
-                          <button
-                            key={agent.id}
-                            onClick={() => setSelectedAgent(agent)}
-                            className={`flex flex-col items-center justify-center p-1 rounded-md border transition-all cursor-pointer aspect-square ${
-                              isSelected
-                                ? 'bg-bg-card border-border-soft shadow-xs scale-102 font-bold'
-                                : 'border-transparent hover:bg-bg-card/45 hover:border-border-soft'
-                            }`}
-                            title={agent.name}
-                          >
-                            <img
-                              src={agent.icon}
-                              alt={agent.name}
-                              className="w-7 h-7 object-contain opacity-90 transition-all duration-150"
-                            />
-                            <span className="text-[8px] font-bold text-text-muted mt-1 truncate max-w-full text-center lowercase">
-                              {agent.name.split(' ')[0]}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Config Code Block */}
-                  <motion.div
-                    key={selectedAgent.id}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.15 }}
-                    className="space-y-1.5"
-                  >
-                    <p className="text-[10px] font-semibold text-text-muted leading-snug">
-                      {selectedAgent.description}
-                    </p>
-                    
-                    <div className="relative rounded-lg border border-border-soft bg-bg p-3 group/code">
-                      <div className="absolute right-2 top-2 opacity-0 group-hover/code:opacity-100 transition-opacity duration-200">
-                        <CopyButton text={selectedAgent.copyText(api_url)} label="Copy" iconOnly={true} />
-                      </div>
-                      <pre className="text-[10px] font-mono text-text-primary whitespace-pre-wrap break-all leading-relaxed pr-10">
-                        <code className="font-mono">
-                          <HighlightedCode code={selectedAgent.copyText(api_url)} mode={selectedAgent.mode} />
-                        </code>
-                      </pre>
-                    </div>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         </div>
       </motion.div>

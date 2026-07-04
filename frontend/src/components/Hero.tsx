@@ -29,7 +29,15 @@ export function Hero() {
           <span className="text-[11px] font-bold tracking-wider text-text-muted uppercase font-mono">
             Powered by
           </span>
-          <img src="/cognee-logo.png" alt="Cognee Logo" className="h-4.5 w-auto object-contain" />
+          <a 
+            href="https://cognee.ai" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="flex items-center cursor-pointer"
+            title="Visit Cognee"
+          >
+            <img src="/cognee-logo.png" alt="Cognee Logo" className="h-4.5 w-auto object-contain" />
+          </a>
         </div>
 
         <h1 className="font-display text-[48px] md:text-[64px] lg:text-[70px] font-black text-text-primary leading-[1.05] max-w-[900px] tracking-tight">

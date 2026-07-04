@@ -21,7 +21,7 @@ export default function DocsPage() {
 
   if (!activePage) {
     return (
-      <Provider>
+      <Provider search={{ enabled: false }}>
         <DocsLayout
           tree={source.getPageTree()}
           githubUrl="https://github.com/ayushk-1801/devbrain"
@@ -75,7 +75,7 @@ export default function DocsPage() {
   };
 
   return (
-    <Provider>
+    <Provider search={{ enabled: false }}>
       <DocsLayout
         tree={source.getPageTree()}
         githubUrl="https://github.com/ayushk-1801/devbrain"

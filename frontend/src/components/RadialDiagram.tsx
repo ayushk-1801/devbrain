@@ -17,6 +17,17 @@ export function RadialDiagram() {
   return (
     <div className="w-full relative overflow-hidden flex justify-center">
       <svg viewBox="0 110 800 390" className="w-full h-auto max-w-[1200px]" xmlns="http://www.w3.org/2000/svg">
+        <style>{`
+          @keyframes dash-flow {
+            to {
+              stroke-dashoffset: -20;
+            }
+          }
+          .anim-flow-line {
+            stroke-dasharray: 5 5;
+            animation: dash-flow 1.2s infinite linear;
+          }
+        `}</style>
         <defs>
           <filter id="blur-arc" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="3" />
@@ -59,8 +70,8 @@ export function RadialDiagram() {
           <path d="M 540 300 L 720 300" stroke="url(#grad-peach-right)" strokeWidth="40" fill="none" />
         </g>
         
-        <path d="M 120 300 L 270 300" stroke="var(--color-border)" strokeWidth="1.2" strokeDasharray="4 4" fill="none" />
-        <path d="M 530 300 L 680 300" stroke="var(--color-border)" strokeWidth="1.2" strokeDasharray="4 4" fill="none" />
+        <path d="M 120 300 L 270 300" stroke="var(--color-border)" strokeWidth="1.2" className="anim-flow-line" fill="none" />
+        <path d="M 530 300 L 680 300" stroke="var(--color-border)" strokeWidth="1.2" className="anim-flow-line" fill="none" />
 
         <circle cx="270" cy="300" r="4" fill="var(--color-border)" />
         <circle cx="530" cy="300" r="4" fill="var(--color-border)" />
