@@ -33,7 +33,7 @@ export const GoogleGeminiEffect = ({
       )}
       {title && (
         <div className="w-full h-[890px] -top-60 md:-top-40  flex items-center justify-center bg-transparent absolute ">
-          <button className="font-bold bg-btn-dark rounded-full md:px-6 md:py-3 px-4 py-2 md:mt-24 mt-8 z-30 md:text-base text-btn-dark-text text-xs w-fit mx-auto transition-all duration-200 hover:bg-[#3a3836] cursor-pointer shadow-md border-[1.5px] border-border">
+          <button className="font-bold bg-btn-dark rounded-full md:px-6 md:py-3 px-4 py-2 md:mt-24 mt-8 z-30 md:text-base text-btn-dark-text text-xs w-fit mx-auto transition-all duration-200 hover:bg-btn-dark-hover cursor-pointer shadow-md border-[1.5px] border-border">
             cognee.ai
           </button>
         </div>

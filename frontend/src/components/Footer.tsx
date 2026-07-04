@@ -91,7 +91,7 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "top-[2%] left-[4%] lg:left-[16%]",
+    position: "top-[6%] left-[12%] lg:left-[25%]",
     dx: -60,
     dy: -40,
     logo: (
@@ -103,7 +103,7 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "top-[12%] right-[5%] lg:right-[15%]",
+    position: "top-[12%] right-[10%] lg:right-[20%]",
     dx: 60,
     dy: -30,
     logo: (
@@ -115,7 +115,7 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "top-[22%] left-[2%] lg:left-[4%]",
+    position: "top-[22%] left-[6%] lg:left-[16%]",
     dx: -80,
     dy: -10,
     logo: (
@@ -127,7 +127,7 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "top-[44%] left-[6%] lg:left-[14%]",
+    position: "top-[44%] left-[10%] lg:left-[22%]",
     dx: -60,
     dy: 10,
     logo: (
@@ -139,7 +139,7 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "top-[34%] right-[2%] lg:right-[3%]",
+    position: "top-[34%] right-[6%] lg:right-[15%]",
     dx: 70,
     dy: -10,
     logo: (
@@ -151,7 +151,7 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "top-[56%] right-[8%] lg:right-[18%]",
+    position: "top-[56%] right-[12%] lg:right-[22%]",
     dx: 50,
     dy: 20,
     logo: (
@@ -163,7 +163,7 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "top-[68%] left-[1%] lg:left-[2%]",
+    position: "top-[68%] left-[6%] lg:left-[14%]",
     dx: -70,
     dy: 40,
     logo: (
@@ -175,19 +175,20 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "top-[88%] left-[5%] lg:left-[12%]",
+    position: "top-[80%] left-[15%] lg:left-[25%]",
     dx: -50,
     dy: 60,
     logo: (
       <img src="/opencode-logo-removebg-preview.png" alt="OpenCode" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
+
   {
     name: "Windsurf",
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "top-[74%] right-[3%] lg:right-[6%]",
+    position: "top-[74%] right-[8%] lg:right-[16%]",
     dx: 70,
     dy: 40,
     logo: (
@@ -199,7 +200,7 @@ const agents = [
     bg: "bg-white",
     borderColor: "border-[rgba(4,2,0,0.08)]",
     shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
-    position: "top-[92%] right-[7%] lg:right-[12%]",
+    position: "top-[72%] right-[24%] lg:right-[32%]",
     dx: 50,
     dy: 60,
     logo: (
@@ -208,7 +209,7 @@ const agents = [
   }
 ];
 
-function AgentIcon({ agent, progress }: { agent: typeof agents[0]; progress: any }) {
+function AgentIcon({ agent, progress }: { agent: typeof agents[0]; progress: any; key?: any }) {
   const x = useTransform(progress, [0, 1], [0, agent.dx * (typeof window !== 'undefined' && window.innerWidth < 1024 ? 0.35 : 1)]);
   const y = useTransform(progress, [0, 1], [0, agent.dy * (typeof window !== 'undefined' && window.innerWidth < 1024 ? 0.35 : 1)]);
 
@@ -243,7 +244,7 @@ export function Footer() {
   return (
     <footer 
       ref={footerRef}
-      className="w-full flex flex-col mt-20 relative bg-bg"
+      className="w-screen flex flex-col mt-20 relative bg-bg left-1/2 -translate-x-1/2"
     >
       {/* Top Ribbon Wave */}
       <div className="w-full h-[160px] absolute top-0 left-0 right-0 transform -translate-y-[159px] pointer-events-none">
@@ -280,8 +281,8 @@ export function Footer() {
 
       {/* CTA Content */}
       <div ref={ctaRef} className="w-full relative flex flex-col items-center justify-center pt-24 pb-28 px-6 z-10 bg-transparent max-w-[1200px] mx-auto overflow-visible min-h-[520px]">
-        {/* Scattered Agent Logos (Mobile & Desktop) */}
-        <div className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden">
+        {/* Scattered Agent Logos (Mobile & Desktop) - Constrained between ribbons vertically, but spans full viewport width */}
+        <div className="absolute inset-y-0 w-screen left-1/2 -translate-x-1/2 pointer-events-none z-0 overflow-hidden">
           {agents.map((agent, index) => (
             <AgentIcon key={index} agent={agent} progress={scrollYProgress} />
           ))}
@@ -297,7 +298,7 @@ export function Footer() {
           One Docker command. Any GitHub repo.<br />Connects to Claude Code in under 5 minutes.
         </p>
 
-        <button className="bg-btn-dark text-btn-dark-text text-[14px] md:text-[15px] font-medium px-[32px] py-[16px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer mt-10 hover:bg-[#3a3836]">
+        <button className="bg-btn-dark text-btn-dark-text text-[14px] md:text-[15px] font-medium px-[32px] py-[16px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer mt-10 hover:bg-btn-dark-hover">
           Deploy with Docker
         </button>
 

@@ -82,8 +82,42 @@ services:
     profiles:
       - mcp
 
+  # -----------------------------------------------------------------------
+  # Platform service — GitHub OAuth login + per-user instance provisioner
+  # Runs on port 9000; provisions tenant containers via Docker socket.
+  # -----------------------------------------------------------------------
+  devbrain-platform:
+    build: .
+    command: ["uvicorn", "backend.platform.app:platform_app", "--host", "0.0.0.0", "--port", "9000"]
+    ports:
+      - "9000:9000"
+    env_file: .env
+    environment:
+      PLATFORM_DB_PATH: /data/platform/platform.db
+      PLATFORM_DATA_DIR: /data/platform
+      DEVBRAIN_IMAGE: devbrain-devbrain-api
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker-in-Docker control
+      - platform-db:/data/platform
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
 volumes:
   redis-data:
   cognee-data:
   cognee-system:
   devbrain-registry:
+  platform-db:
+
+networks:
+  default:
+    name: devbrain-platform

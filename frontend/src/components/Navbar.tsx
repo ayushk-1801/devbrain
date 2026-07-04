@@ -1,15 +1,19 @@
-import { Github, Sun, Moon, Menu, X } from 'lucide-react';
+import { Github, Sun, Moon, Menu, X, LogOut, LayoutDashboard } from 'lucide-react';
 import { motion, useScroll, useTransform, AnimatePresence } from 'motion/react';
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Logo } from './ui/Logo';
+import { useAuth } from '../context/AuthContext';
 
 export function Navbar() {
   const { scrollY } = useScroll();
   const location = useLocation();
+  const navigate = useNavigate();
   const isVisualizePage = location.pathname === '/visualize';
+  const { user, login, logout } = useAuth();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined') {
@@ -99,7 +103,7 @@ export function Navbar() {
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
-            className="text-text-muted hover:text-text-primary transition-colors cursor-pointer outline-none p-1.5 rounded-full hover:bg-bg-secondary"
+            className="text-text-muted hover:text-text-primary transition-colors cursor-pointer outline-none p-1.5 rounded-full"
             aria-label="Toggle theme"
           >
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
@@ -107,9 +111,63 @@ export function Navbar() {
           <a href="https://github.com/ayushk-1801/devbrain" target="_blank" rel="noopener noreferrer" aria-label="GitHub Repository" className="flex items-center gap-2 text-text-muted hover:text-text-primary transition-colors">
             <Github size={20} />
           </a>
-          <button className="hidden md:block bg-bg-secondary border-[1.5px] border-border text-text-primary text-[14px] font-medium px-4 py-1.5 rounded-full cursor-pointer hover:bg-text-primary hover:text-bg hover:border-text-primary transition-colors duration-200">
-            Get Started
-          </button>
+
+          {user ? (
+            <div className="relative">
+              <button
+                id="navbar-user-menu-btn"
+                onClick={() => setUserMenuOpen(o => !o)}
+                className="flex items-center gap-2 cursor-pointer group"
+                aria-label="User menu"
+              >
+                <img
+                  src={user.avatar_url}
+                  alt={user.login}
+                  className="w-8 h-8 rounded-full border-2 border-border-soft group-hover:border-text-primary transition-colors"
+                />
+                <span className="hidden md:block text-[13px] font-medium text-text-muted group-hover:text-text-primary transition-colors">
+                  {user.login}
+                </span>
+              </button>
+              <AnimatePresence>
+                {userMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="absolute right-0 top-12 w-48 bg-bg-card border border-border-soft rounded-2xl shadow-lg py-2 z-50"
+                  >
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-[14px] text-text-primary hover:bg-bg-secondary transition-colors"
+                    >
+                      <LayoutDashboard size={15} />
+                      Dashboard
+                    </Link>
+                    <button
+                      onClick={() => { setUserMenuOpen(false); logout(); }}
+                      className="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-[14px] text-text-primary hover:bg-bg-secondary transition-colors"
+                    >
+                      <LogOut size={15} />
+                      Sign out
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <button
+              id="navbar-signin-btn"
+              onClick={login}
+              className="hidden md:flex items-center gap-2 bg-btn-dark border-[1.5px] border-btn-dark text-btn-dark-text text-[14px] font-medium px-4 py-1.5 rounded-full cursor-pointer hover:bg-btn-dark-hover transition-colors duration-200"
+            >
+              <Github size={15} />
+              Sign In
+            </button>
+          )}
+
           {/* Mobile menu toggle */}
           <button 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -167,8 +225,11 @@ export function Navbar() {
                 </Link>
               </>
             )}
-            <button className="w-full bg-btn-dark text-btn-dark-text text-[14px] font-medium py-3 rounded-full mt-2 cursor-pointer hover:bg-[#3a3836]">
-              Get Started
+            <button
+              className="w-full bg-btn-dark text-btn-dark-text text-[14px] font-medium py-3 rounded-full mt-2 cursor-pointer hover:bg-btn-dark-hover"
+              onClick={() => { setMobileMenuOpen(false); user ? navigate('/dashboard') : login(); }}
+            >
+              {user ? 'Dashboard' : 'Sign In with GitHub'}
             </button>
           </motion.div>
         )}
