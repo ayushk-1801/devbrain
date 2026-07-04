@@ -134,6 +134,20 @@ async def list_subscribed_users(repo: str) -> list[str]:
     return list(await r.smembers(_key_subs(repo)))  # type: ignore[misc]
 
 
+async def get_last_agent_seen(repo: str, username: str) -> Optional[datetime]:
+    """Return when the agent last fetched notifications/digests for *username*."""
+    r = await _redis()
+    key = f"{_PREFIX}:sync:agent:{_safe(repo)}:{username.lower()}"
+    return _parse_ts(await r.get(key))
+
+
+async def set_last_agent_seen(repo: str, username: str, when: datetime) -> None:
+    """Persist the agent-level last-seen timestamp."""
+    r = await _redis()
+    key = f"{_PREFIX}:sync:agent:{_safe(repo)}:{username.lower()}"
+    await r.set(key, when.isoformat())
+
+
 # ---------------------------------------------------------------------------
 # Markdown output directory — local filesystem, output artifacts only
 # ---------------------------------------------------------------------------
