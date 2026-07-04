@@ -13,7 +13,7 @@ import hmac
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, Header, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from backend import service
@@ -571,6 +571,28 @@ async def github_webhook(request: Request) -> dict:
     return {"status": "ignored", "event": event}
 
 
+def _require_user_token(x_github_user_token: str | None) -> str:
+    """Require a per-user GitHub PAT forwarded from the MCP layer.
+
+    These endpoints perform attributed write actions (opening issues, commenting,
+    labeling, etc.) and must run as the calling user's own GitHub identity, not
+    the server's central ``GITHUB_TOKEN``. There is deliberately no fallback: if
+    the header is missing, the action fails loudly rather than silently acting
+    as the shared bot account. The token is used in-memory for this one request
+    only — never logged, stored, or cached.
+    """
+    if not x_github_user_token:
+        raise HTTPException(
+            status_code=401,
+            detail=(
+                "Missing X-GitHub-User-Token header. This action is attributed to "
+                "your GitHub account and requires your own personal access token "
+                "(set GITHUB_USER_TOKEN when configuring the DevBrain MCP server)."
+            ),
+        )
+    return x_github_user_token
+
+
 # --- GitHub Issues REST API Endpoints ---
 
 class CreateIssueRequest(BaseModel):
@@ -689,11 +711,15 @@ class GitSmartPushRequest(BaseModel):
 async def api_create_issue(
     req: CreateIssueRequest,
     repo: str = Query(..., description="owner/repo"),
+    x_github_user_token: str | None = Header(default=None),
 ) -> dict:
+    token = _require_user_token(x_github_user_token)
     try:
         return await issues_service.create_issue(
-            repo, req.title, req.body, req.labels, req.assignees, req.milestone
+            repo, req.title, req.body, req.labels, req.assignees, req.milestone, token
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -714,11 +740,15 @@ async def api_update_issue(
     number: int,
     req: UpdateIssueRequest,
     repo: str = Query(..., description="owner/repo"),
+    x_github_user_token: str | None = Header(default=None),
 ) -> dict:
+    token = _require_user_token(x_github_user_token)
     try:
         return await issues_service.update_issue(
-            repo, number, req.title, req.body, req.state, req.labels, req.milestone, req.assignees
+            repo, number, req.title, req.body, req.state, req.labels, req.milestone, req.assignees, token
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -727,9 +757,13 @@ async def api_update_issue(
 async def api_close_issue(
     number: int,
     repo: str = Query(..., description="owner/repo"),
+    x_github_user_token: str | None = Header(default=None),
 ) -> dict:
+    token = _require_user_token(x_github_user_token)
     try:
-        return await issues_service.close_issue(repo, number)
+        return await issues_service.close_issue(repo, number, token)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -738,9 +772,13 @@ async def api_close_issue(
 async def api_reopen_issue(
     number: int,
     repo: str = Query(..., description="owner/repo"),
+    x_github_user_token: str | None = Header(default=None),
 ) -> dict:
+    token = _require_user_token(x_github_user_token)
     try:
-        return await issues_service.reopen_issue(repo, number)
+        return await issues_service.reopen_issue(repo, number, token)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -789,9 +827,13 @@ async def api_add_labels(
     number: int,
     req: AddLabelsRequest,
     repo: str = Query(..., description="owner/repo"),
+    x_github_user_token: str | None = Header(default=None),
 ) -> list[str]:
+    token = _require_user_token(x_github_user_token)
     try:
-        return await issues_service.add_labels(repo, number, req.labels)
+        return await issues_service.add_labels(repo, number, req.labels, token)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -801,9 +843,13 @@ async def api_remove_label(
     number: int,
     label_name: str,
     repo: str = Query(..., description="owner/repo"),
+    x_github_user_token: str | None = Header(default=None),
 ) -> list[str]:
+    token = _require_user_token(x_github_user_token)
     try:
-        return await issues_service.remove_label(repo, number, label_name)
+        return await issues_service.remove_label(repo, number, label_name, token)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -813,9 +859,13 @@ async def api_replace_labels(
     number: int,
     req: AddLabelsRequest,
     repo: str = Query(..., description="owner/repo"),
+    x_github_user_token: str | None = Header(default=None),
 ) -> list[str]:
+    token = _require_user_token(x_github_user_token)
     try:
-        return await issues_service.replace_labels(repo, number, req.labels)
+        return await issues_service.replace_labels(repo, number, req.labels, token)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -846,9 +896,13 @@ async def api_assign_issue(
     number: int,
     req: AssignIssueRequest,
     repo: str = Query(..., description="owner/repo"),
+    x_github_user_token: str | None = Header(default=None),
 ) -> list[str]:
+    token = _require_user_token(x_github_user_token)
     try:
-        return await issues_service.assign_issue(repo, number, req.assignees)
+        return await issues_service.assign_issue(repo, number, req.assignees, token)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -858,9 +912,13 @@ async def api_unassign_issue(
     number: int,
     req: AssignIssueRequest,
     repo: str = Query(..., description="owner/repo"),
+    x_github_user_token: str | None = Header(default=None),
 ) -> list[str]:
+    token = _require_user_token(x_github_user_token)
     try:
-        return await issues_service.unassign_issue(repo, number, req.assignees)
+        return await issues_service.unassign_issue(repo, number, req.assignees, token)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -880,9 +938,13 @@ async def api_comment_issue(
     number: int,
     req: CommentIssueRequest,
     repo: str = Query(..., description="owner/repo"),
+    x_github_user_token: str | None = Header(default=None),
 ) -> dict:
+    token = _require_user_token(x_github_user_token)
     try:
-        return await issues_service.comment_issue(repo, number, req.body)
+        return await issues_service.comment_issue(repo, number, req.body, token)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -892,9 +954,13 @@ async def api_edit_comment(
     comment_id: int,
     req: CommentIssueRequest,
     repo: str = Query(..., description="owner/repo"),
+    x_github_user_token: str | None = Header(default=None),
 ) -> dict:
+    token = _require_user_token(x_github_user_token)
     try:
-        return await issues_service.edit_comment(repo, comment_id, req.body)
+        return await issues_service.edit_comment(repo, comment_id, req.body, token)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -903,9 +969,13 @@ async def api_edit_comment(
 async def api_delete_comment(
     comment_id: int,
     repo: str = Query(..., description="owner/repo"),
+    x_github_user_token: str | None = Header(default=None),
 ) -> dict:
+    token = _require_user_token(x_github_user_token)
     try:
-        return await issues_service.delete_comment(repo, comment_id)
+        return await issues_service.delete_comment(repo, comment_id, token)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 

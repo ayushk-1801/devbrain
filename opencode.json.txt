@@ -11,7 +11,8 @@
       "cwd": "D:/PROjects/devbrain",
       "timeout": 300000,
       "environment": {
-        "DEVBRAIN_API_URL": "http://localhost:8000"
+        "DEVBRAIN_API_URL": "http://localhost:8000",
+        "GITHUB_USER_TOKEN": ""
       },
       "enabled": true
     }

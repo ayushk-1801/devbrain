@@ -219,6 +219,31 @@ list_repos()
 
 You should see the repos the maintainer has already ingested.
 
+### Optional: acting as yourself on GitHub
+
+Read/query tools (`ingest_repo`, `query_devbrain`, `list_issues`, etc.) work with
+just `DEVBRAIN_API_URL` — they use the maintainer's central `GITHUB_TOKEN`.
+
+Tools that create attributed GitHub content — `create_issue`, `update_issue`,
+`close_issue`, `reopen_issue`, `add_labels`, `remove_label`, `replace_labels`,
+`assign_issue`, `unassign_issue`, `comment_issue`, `edit_comment`,
+`delete_comment` — instead run as *you*, using your own GitHub personal access
+token. Create a **fine-grained PAT** scoped to just the repo(s) you use, with
+only the "Issues: Read and write" permission and an expiration date, then:
+
+```bash
+claude mcp add devbrain -s project \
+  --env DEVBRAIN_API_URL=https://devbrain.your-company.com \
+  --env GITHUB_USER_TOKEN=github_pat_... \
+  -- python -m backend.mcp_server
+```
+
+The token is sent per-call as an `X-GitHub-User-Token` header and used
+in-memory for that one GitHub API request — the backend never stores or logs
+it. There's no fallback to the central token: if `GITHUB_USER_TOKEN` isn't set,
+these tools fail with a clear error instead of silently acting as the shared
+bot account.
+
 ---
 
 ## MCP tools

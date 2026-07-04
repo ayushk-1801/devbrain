@@ -2,10 +2,27 @@
 
 This process runs locally (stdio transport) for each user and proxies every tool
 call to the DevBrain REST API at DEVBRAIN_API_URL. Users need only that URL — no
-GitHub token, no Cognee config, no LLM keys.
+GitHub token, no Cognee config, no LLM keys for read/query tools.
 
-The maintainer runs one backend (main.py) with all secrets; users point this
-server at it:
+The one exception: tools that create attributed GitHub content (opening issues,
+commenting, labeling, assigning, closing/reopening) run as *your* GitHub account,
+not the server's central bot token. Set GITHUB_USER_TOKEN to a fine-grained PAT
+scoped to just the repo(s) you use, with only the "Issues: Read and write"
+permission and an expiration date:
+
+    claude mcp add devbrain -s project \\
+      -e DEVBRAIN_API_URL="https://devbrain.example.com" \\
+      -e GITHUB_USER_TOKEN="github_pat_..." \\
+      -- python -m backend.mcp_server
+
+The token is forwarded per-call as the X-GitHub-User-Token header and is never
+stored server-side — the backend uses it in-memory for that one GitHub API call
+and discards it. There is no fallback to the server's central token: if
+GITHUB_USER_TOKEN isn't set, attributed write tools fail with a clear error
+rather than silently acting as the shared bot account.
+
+The maintainer runs one backend (main.py) with all other secrets; users point
+this server at it:
 
     DEVBRAIN_API_URL=https://devbrain.example.com \\
       claude mcp add devbrain -- python -m backend.mcp_server
@@ -36,6 +53,25 @@ def _client() -> httpx.AsyncClient:
     if _http is None:
         raise RuntimeError("MCP server not initialised")
     return _http
+
+
+def _user_token_headers() -> dict[str, str]:
+    """Headers for tools that create attributed GitHub content.
+
+    Reads GITHUB_USER_TOKEN fresh on every call (not cached at import time) so a
+    user can update it without restarting the MCP process. Deliberately raises
+    instead of falling back to no header — the backend has no central-token
+    fallback for these actions either, so failing fast here gives a clearer
+    error than a round-trip 401.
+    """
+    token = os.getenv("GITHUB_USER_TOKEN", "")
+    if not token:
+        raise RuntimeError(
+            "GITHUB_USER_TOKEN is not set. This action creates GitHub content "
+            "attributed to your account and requires your own personal access "
+            "token — set GITHUB_USER_TOKEN when configuring this MCP server."
+        )
+    return {"X-GitHub-User-Token": token}
 
 
 def _raise_for_status(response: httpx.Response) -> None:
@@ -211,7 +247,9 @@ async def create_issue(
     if milestone is not None:
         body_data["milestone"] = milestone
 
-    response = await client.post("/issues", params={"repo": repo}, json=body_data)
+    response = await client.post(
+        "/issues", params={"repo": repo}, json=body_data, headers=_user_token_headers()
+    )
     _raise_for_status(response)
     return response.json()
 
@@ -273,7 +311,9 @@ async def update_issue(
     if assignees is not None:
         body_data["assignees"] = assignees
 
-    response = await client.patch(f"/issues/{number}", params={"repo": repo}, json=body_data)
+    response = await client.patch(
+        f"/issues/{number}", params={"repo": repo}, json=body_data, headers=_user_token_headers()
+    )
     _raise_for_status(response)
     return response.json()
 
@@ -287,7 +327,9 @@ async def close_issue(repo: str, number: int) -> dict:
         number: The issue number.
     """
     client = _client()
-    response = await client.post(f"/issues/{number}/close", params={"repo": repo})
+    response = await client.post(
+        f"/issues/{number}/close", params={"repo": repo}, headers=_user_token_headers()
+    )
     _raise_for_status(response)
     return response.json()
 
@@ -301,7 +343,9 @@ async def reopen_issue(repo: str, number: int) -> dict:
         number: The issue number.
     """
     client = _client()
-    response = await client.post(f"/issues/{number}/reopen", params={"repo": repo})
+    response = await client.post(
+        f"/issues/{number}/reopen", params={"repo": repo}, headers=_user_token_headers()
+    )
     _raise_for_status(response)
     return response.json()
 
@@ -378,7 +422,9 @@ async def add_labels(repo: str, number: int, labels: list[str]) -> list:
         labels: List of label names to add.
     """
     client = _client()
-    response = await client.post(f"/issues/{number}/labels", params={"repo": repo}, json={"labels": labels})
+    response = await client.post(
+        f"/issues/{number}/labels", params={"repo": repo}, json={"labels": labels}, headers=_user_token_headers()
+    )
     _raise_for_status(response)
     return response.json()
 
@@ -393,7 +439,9 @@ async def remove_label(repo: str, number: int, label_name: str) -> list:
         label_name: Name of the label to remove.
     """
     client = _client()
-    response = await client.delete(f"/issues/{number}/labels/{label_name}", params={"repo": repo})
+    response = await client.delete(
+        f"/issues/{number}/labels/{label_name}", params={"repo": repo}, headers=_user_token_headers()
+    )
     _raise_for_status(response)
     return response.json()
 
@@ -408,7 +456,9 @@ async def replace_labels(repo: str, number: int, labels: list[str]) -> list:
         labels: List of new label names to set.
     """
     client = _client()
-    response = await client.put(f"/issues/{number}/labels", params={"repo": repo}, json={"labels": labels})
+    response = await client.put(
+        f"/issues/{number}/labels", params={"repo": repo}, json={"labels": labels}, headers=_user_token_headers()
+    )
     _raise_for_status(response)
     return response.json()
 
@@ -452,7 +502,9 @@ async def assign_issue(repo: str, number: int, assignees: list[str]) -> list:
         assignees: List of GitHub usernames to assign.
     """
     client = _client()
-    response = await client.post(f"/issues/{number}/assign", params={"repo": repo}, json={"assignees": assignees})
+    response = await client.post(
+        f"/issues/{number}/assign", params={"repo": repo}, json={"assignees": assignees}, headers=_user_token_headers()
+    )
     _raise_for_status(response)
     return response.json()
 
@@ -467,7 +519,9 @@ async def unassign_issue(repo: str, number: int, assignees: list[str]) -> list:
         assignees: List of GitHub usernames to unassign.
     """
     client = _client()
-    response = await client.post(f"/issues/{number}/unassign", params={"repo": repo}, json={"assignees": assignees})
+    response = await client.post(
+        f"/issues/{number}/unassign", params={"repo": repo}, json={"assignees": assignees}, headers=_user_token_headers()
+    )
     _raise_for_status(response)
     return response.json()
 
@@ -495,7 +549,9 @@ async def comment_issue(repo: str, number: int, body: str) -> dict:
         body: Content of the comment.
     """
     client = _client()
-    response = await client.post(f"/issues/{number}/comments", params={"repo": repo}, json={"body": body})
+    response = await client.post(
+        f"/issues/{number}/comments", params={"repo": repo}, json={"body": body}, headers=_user_token_headers()
+    )
     _raise_for_status(response)
     return response.json()
 
@@ -510,7 +566,9 @@ async def edit_comment(repo: str, comment_id: int, body: str) -> dict:
         body: The new body content.
     """
     client = _client()
-    response = await client.patch(f"/comments/{comment_id}", params={"repo": repo}, json={"body": body})
+    response = await client.patch(
+        f"/comments/{comment_id}", params={"repo": repo}, json={"body": body}, headers=_user_token_headers()
+    )
     _raise_for_status(response)
     return response.json()
 
@@ -524,7 +582,9 @@ async def delete_comment(repo: str, comment_id: int) -> dict:
         comment_id: The ID of the comment to delete.
     """
     client = _client()
-    response = await client.delete(f"/comments/{comment_id}", params={"repo": repo})
+    response = await client.delete(
+        f"/comments/{comment_id}", params={"repo": repo}, headers=_user_token_headers()
+    )
     _raise_for_status(response)
     return response.json()
 
