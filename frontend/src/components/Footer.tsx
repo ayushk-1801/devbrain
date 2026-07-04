@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Copy, Check } from 'lucide-react';
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform, useScroll } from 'motion/react';
 import { Logo } from './ui/Logo';
@@ -358,9 +359,8 @@ export function Footer() {
           © 2026 DevBrain
         </div>
         <div className="flex items-center gap-[24px]">
-          <a href="#" className="text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">Terms</a>
           <a href="https://github.com/ayushk-1801/devbrain" className="text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">GitHub</a>
-          <a href="#" className="text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">Docs</a>
+          <Link to="/docs" className="text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">Docs</Link>
         </div>
       </div>
     </footer>
