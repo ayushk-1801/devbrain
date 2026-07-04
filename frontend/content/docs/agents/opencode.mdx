@@ -1,0 +1,26 @@
+---
+title: OpenCode
+description: Connect OpenCode to DevBrain for context-aware terminal coding.
+---
+
+[OpenCode](https://opencode.ai) is an open-source terminal-based coding agent. Connect it to DevBrain via MCP for full codebase context.
+
+## Setup
+
+Add DevBrain to your OpenCode MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "devbrain": {
+      "command": "uv",
+      "args": ["--directory", "./cognee-mcp", "run", "cognee-mcp"],
+      "env": {
+        "LLM_API_KEY": "$COGNEE_API_KEY"
+      }
+    }
+  }
+}
+```
+
+OpenCode will then query DevBrain automatically during coding sessions, surfacing relevant historical context alongside its code suggestions.

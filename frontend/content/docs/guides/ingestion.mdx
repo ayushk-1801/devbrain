@@ -1,0 +1,41 @@
+---
+title: Ingestion
+description: How DevBrain ingests commits, PRs, ADRs, and codebase structure into the knowledge graph.
+---
+
+DevBrain ingests five data sources into Cognee's hybrid graph-vector memory:
+
+## Commits
+
+**Ingested on:** every `push` webhook event  
+**Graph nodes:** `Commit`, `Developer`, `File`  
+**Edges:** `Commit → MODIFIED → File`, `Commit → AUTHORED_BY → Developer`
+
+## Pull Requests
+
+**Ingested on:** every `pull_request` webhook event  
+**Graph nodes:** `PullRequest`, `Developer`, `File`, `Issue`, `Review`  
+**Edges:** `PR → CHANGED → File`, `PR → MOTIVATED_BY → Issue`, `PR → APPROVED_BY → Developer`
+
+## Architecture Decision Records (ADRs)
+
+**Scanned from:** `/docs/decisions/`, `/adr/`, `/docs/adr/`, `/.decisions/`  
+**Graph nodes:** `ADR`, `Module`  
+**Edges:** `ADR → JUSTIFIES → Module`, `ADR → SUPERSEDES → ADR`
+
+## Codebase (AST)
+
+**Scanned via:** `cognee[codegraph]` - supports Python, JS, TS, Go, Rust, Java, C#, PHP, Ruby  
+**Graph nodes:** `Function`, `Class`, `Module`  
+**Edges:** `Function → CALLS → Function`, `Class → INHERITS → Class`, `Module → DEPENDS_ON → Module`
+
+## Releases & Tags
+
+**Ingested on:** release events  
+**Graph nodes:** `Release`, `Tag`, `Deployment`  
+**Edges:** `Release → TAGGED_BY → Tag`, `Deployment → DEPLOYED_FROM → Release`
+
+## Incremental vs Full Ingestion
+
+- **Webhook events** trigger incremental ingestion - only changed files are processed
+- **`POST /ingest`** triggers a full historical sync (used for initial setup)

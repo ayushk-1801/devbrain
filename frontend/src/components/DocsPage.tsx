@@ -93,13 +93,9 @@ export default function DocsPage() {
           tableOfContent={{ enabled: true }}
         >
           <DocsBody>
-            <h1 className="text-3xl font-extrabold tracking-tight mb-2">
+            <h1 className="text-3xl font-extrabold tracking-tight mb-6">
               {data.title}
             </h1>
-            <p className="text-muted-foreground text-lg mb-6">
-              {data.description}
-            </p>
-            <hr className="my-6 border-border" />
             <MDX components={mdxComponents} />
           </DocsBody>
         </PageLayout>

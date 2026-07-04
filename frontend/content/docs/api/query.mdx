@@ -1,0 +1,48 @@
+---
+title: Query (Recall)
+description: Natural language query endpoint for the Cognee hybrid memory layer.
+---
+
+Query DevBrain's hybrid graph-vector memory with natural language.
+
+## Request
+
+```http
+GET /query?q={question}&repo={owner/repo}
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `q` | string | yes | Natural language question |
+| `repo` | string | yes | Target repository |
+
+### Example
+
+```bash
+curl "http://localhost:8000/query?q=why+was+auth+refactored&repo=owner/your-repo"
+```
+
+### Response
+
+```json
+{
+  "answer": "The auth module was refactored to decouple it from the user service...",
+  "results": [
+    {
+      "source": "PR #42",
+      "relevance": 0.95,
+      "content": "..."
+    }
+  ]
+}
+```
+
+## Query Modes
+
+DevBrain supports multiple retrieval modes:
+
+- **Hybrid (default)** - automatically routes between semantic and graph traversal
+- **Graph Completion** - best for "why" questions requiring multi-hop reasoning
+- **Chunks** - raw text retrieval from PRs, commits, and ADRs

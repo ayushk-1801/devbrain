@@ -1,0 +1,10 @@
+{
+  "title": "Guides",
+  "defaultOpen": true,
+  "pages": [
+    "index",
+    "ingestion",
+    "webhooks",
+    "changelog"
+  ]
+}

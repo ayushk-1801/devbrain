@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { UserPlus, Map, MessageSquare, BookOpen, Search, GitBranch, History, CheckCircle, Users, Box, TrendingUp, AlertCircle, Bot, Code2, ShieldAlert, PenTool, Lock, Navigation } from 'lucide-react';
+import { UserPlus, Map, MessageSquare, BookOpen, Search, GitBranch, History, CheckCircle, Users, Box, TrendingUp, AlertCircle, Bot, Code2, ShieldAlert, PenTool, Lock, Navigation, Bell } from 'lucide-react';
 
 const tabs = [
   { id: 'onboarding', label: 'Onboarding' },
@@ -14,8 +14,8 @@ const useCaseContent: Record<string, any[]> = {
     { icon: Map, title: "Codebase Orientation", body: "Ask 'what does the payment module do and what depends on it?' Get a sourced walkthrough of the architecture from the actual history." },
     { icon: MessageSquare, title: "Silent Knowledge Transfer", body: "When a senior engineer leaves, their institutional knowledge stays in the graph. DevBrain makes offboarding a non-event." },
     { icon: BookOpen, title: "Self-Serve Documentation", body: "Junior engineers answer their own questions without interrupting seniors. Slack messages asking 'why does this exist' drop dramatically." },
-    { icon: Search, title: "Context Before a PR", body: "Before touching unfamiliar code, engineers query DevBrain to understand all prior decisions affecting the module. No stepping on landmines." },
-    { icon: GitBranch, title: "Cross-Team Visibility", body: "Frontend asks 'did the API team change the auth interface?' DevBrain answers with exact commits and PR links - no cross-team Slack threads." }
+    { icon: GitBranch, title: "Cross-Team Visibility", body: "Frontend asks 'did the API team change the auth interface?' DevBrain answers with exact commits and PR links - no cross-team Slack threads." },
+    { icon: Bell, title: "Personal Update Digest", body: "Every @mention of you, every file you touched that changed, and every issue assigned to you - delivered as a digest. No more 'did you see my comment on issue #42?'" }
   ],
   review: [
     { icon: History, title: "Prior Art Check", body: "Before merging, reviewers ask DevBrain if this approach has been tried before. Avoid re-solving solved problems." },

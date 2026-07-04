@@ -1,0 +1,66 @@
+---
+title: Pull Requests
+description: Pull request management and review endpoints.
+---
+
+Manage GitHub pull requests directly through DevBrain.
+
+## Create a PR
+
+```http
+POST /api/pulls
+```
+
+```json
+{
+  "repo": "owner/repo-name",
+  "title": "Fix login on Safari",
+  "head": "fix/safari-login",
+  "base": "main",
+  "body": "## Summary\nFixes the Safari rendering issue...",
+  "draft": false
+}
+```
+
+## List PRs
+
+```http
+GET /api/pulls?repo=owner/repo-name&state=open
+```
+
+### Filters
+
+| Parameter | Description |
+|-----------|-------------|
+| `state` | `open`, `closed`, or `all` |
+| `head` | Filter by head branch |
+| `base` | Filter by base branch (e.g. `main`) |
+| `sort` | `created`, `updated`, `popularity`, `long-running` |
+| `direction` | `asc` or `desc` |
+
+## Merge a PR
+
+```http
+POST /api/pulls/{number}/merge
+```
+
+```json
+{
+  "merge_method": "squash"
+}
+```
+
+Available methods: `merge`, `squash`, `rebase`.
+
+## Update / Close
+
+```http
+PATCH /api/pulls/{number}
+```
+
+```json
+{
+  "title": "Updated title",
+  "state": "closed"
+}
+```

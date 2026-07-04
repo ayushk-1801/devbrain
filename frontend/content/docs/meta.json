@@ -2,7 +2,12 @@
   "title": "Documentation",
   "pages": [
     "index",
+    "quickstart",
     "setup",
-    "api"
+    "guides",
+    "agents",
+    "api",
+    "architecture",
+    "faq"
   ]
 }

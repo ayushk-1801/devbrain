@@ -1,0 +1,29 @@
+---
+title: Claude Code
+description: Connect Claude Code to DevBrain via the Cognee MCP server.
+---
+
+Connect Claude Code to DevBrain for automatic context-aware coding.
+
+## Prerequisites
+
+- DevBrain running (`docker-compose up`)
+- Claude Code CLI installed
+- `COGNEE_API_KEY` set in your environment
+
+## Configuration
+
+```bash
+claude mcp add devbrain -s project \
+  -e LLM_API_KEY="$COGNEE_API_KEY" \
+  -- uv --directory ./cognee-mcp run cognee-mcp
+```
+
+Once configured, Claude Code automatically calls DevBrain in every session to understand the context behind the code it's working on.
+
+## What Claude Code Can Ask
+
+- "Why was this module structured this way?"
+- "What PRs touched this file recently?"
+- "Who approved the last refactor of this component?"
+- "What architectural decisions relate to this code?"

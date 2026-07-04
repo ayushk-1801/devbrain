@@ -355,10 +355,16 @@ export function Footer() {
 
       {/* Footer Bar */}
       <div className="w-full border-t border-[rgba(4,2,0,0.1)] px-[24px] md:px-[48px] py-[24px] flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="text-[13px] text-text-muted">
-          © 2026 DevBrain
+        <div className="flex items-center justify-center md:justify-start gap-3 flex-1">
+          <div className="inline-flex items-center gap-1.5 bg-accent-mint/20 border border-accent-mint/30 px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono text-text-primary leading-none">
+            Open Source
+            <span className="text-text-muted font-normal normal-case">MIT</span>
+          </div>
         </div>
-        <div className="flex items-center gap-[24px]">
+        <span className="text-[13px] text-text-muted">
+          © 2026 DevBrain
+        </span>
+        <div className="flex items-center justify-center md:justify-end gap-[24px] flex-1">
           <a href="https://github.com/ayushk-1801/devbrain" className="text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">GitHub</a>
           <Link to="/docs" className="text-[13px] text-text-muted hover:text-text-primary hover:underline underline-offset-4 decoration-1">Docs</Link>
         </div>
