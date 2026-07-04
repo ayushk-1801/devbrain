@@ -48,6 +48,11 @@ class Settings:
     # --- DevBrain ---
     # JSON file tracking which repos have been ingested (multi-repo support).
     REGISTRY_PATH: str = os.getenv("REGISTRY_PATH", "./.devbrain/repos.json")
+    # Absolute or relative path to the local git checkout used by git_* tools.
+    # Only needed when the backend runs on the same machine as the git clone.
+    LOCAL_REPO_PATH: str = os.getenv("LOCAL_REPO_PATH", ".")
+    # Current active user name for agent notifications. Defaults to "arpit".
+    CURRENT_USER: str = os.getenv("CURRENT_USER", "arpit")
     # Remote backend URL for the MCP client mode. When set, the MCP server proxies
     # all calls to this URL instead of importing the service layer directly.
     DEVBRAIN_API_URL: str = os.getenv("DEVBRAIN_API_URL", "")
