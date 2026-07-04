@@ -18,6 +18,11 @@ from pydantic import BaseModel
 
 from backend import service
 from backend import issues_service
+from backend import pr_service
+from backend import commit_service
+from backend import history_service
+from backend import search_service
+from backend import git_service
 from backend.changelog import notifier as cl_notifier
 from backend.changelog import profile as cl_profile
 from backend.changelog import tracker as cl_tracker
@@ -310,6 +315,44 @@ async def changelog_user(
     }
 
 
+@app.get("/changelog/user/{username}/notifications")
+async def changelog_user_notifications(
+    username: str,
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    """Return new @mentions and file-touch notifications for the user since the last check."""
+    try:
+        from datetime import datetime, timezone, timedelta
+        
+        # Get the last check time for the agent
+        last_seen = await cl_tracker.get_last_agent_seen(repo, username)
+        now = datetime.now(timezone.utc)
+        
+        # If no last_seen exists, default to 24 hours ago
+        since = last_seen or (now - timedelta(hours=24))
+        
+        # Query Redis via cl_profile
+        mentions = await cl_profile.get_mentions_since(repo, username, since)
+        touches = await cl_profile.get_file_touches_since(repo, username, since)
+        
+        # Update the agent seen watermark
+        await cl_tracker.set_last_agent_seen(repo, username, now)
+        
+        return {
+            "repo": repo,
+            "username": username,
+            "since": since.isoformat(),
+            "checked_at": now.isoformat(),
+            "new_mentions_count": len(mentions),
+            "new_touches_count": len(touches),
+            "mentions": mentions,
+            "touches": touches,
+        }
+    except Exception as exc:
+        logger.exception("Failed to fetch user notifications for %s", username)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @app.post("/changelog/subscribe")
 async def changelog_subscribe(req: SubscribeRequest) -> dict:
     """Register a user to receive update digests for a repo.
@@ -560,6 +603,88 @@ class CommentIssueRequest(BaseModel):
     body: str
 
 
+class CreatePullRequestRequest(BaseModel):
+    title: str
+    head: str
+    base: str
+    body: str = ""
+    draft: bool = False
+
+class UpdatePullRequestRequest(BaseModel):
+    title: str = None
+    body: str = None
+    state: str = None
+    base: str = None
+
+class MergePullRequestRequest(BaseModel):
+    commit_title: str = None
+    commit_message: str = None
+    merge_method: str = "merge"
+
+
+# --- Git Request Models ---
+
+class GitCommitRequest(BaseModel):
+    message: str
+    repo_path: str | None = None
+    add_all: bool = True
+
+class GitPushRequest(BaseModel):
+    repo_path: str | None = None
+    remote: str = "origin"
+    branch: str | None = None
+    force: bool = False
+
+class GitPullRequest(BaseModel):
+    repo_path: str | None = None
+    remote: str = "origin"
+    branch: str | None = None
+    rebase: bool = False
+
+class GitSwitchBranchRequest(BaseModel):
+    branch: str
+    repo_path: str | None = None
+    create: bool = False
+
+class GitCreateBranchRequest(BaseModel):
+    name: str
+    from_ref: str | None = None
+    repo_path: str | None = None
+    checkout: bool = False
+
+class GitMergeRequest(BaseModel):
+    branch: str
+    repo_path: str | None = None
+    strategy: str | None = None
+    no_ff: bool = True
+    message: str | None = None
+
+class GitRebaseRequest(BaseModel):
+    onto: str
+    repo_path: str | None = None
+    interactive: bool = False
+
+class GitStashRequest(BaseModel):
+    action: str = "push"
+    message: str | None = None
+    repo_path: str | None = None
+    index: int | None = None
+
+class GitSyncRequest(BaseModel):
+    repo_path: str | None = None
+    remote: str = "origin"
+    branch: str | None = None
+
+class GitSmartPushRequest(BaseModel):
+    message: str
+    repo_path: str | None = None
+    remote: str = "origin"
+    branch: str | None = None
+    add_all: bool = True
+    force: bool = False
+    pull_before_push: bool = True
+
+
 @app.post("/issues")
 async def api_create_issue(
     req: CreateIssueRequest,
@@ -792,5 +917,461 @@ async def api_list_comments(
 ) -> list[dict]:
     try:
         return await issues_service.list_comments(repo, number)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+# --- GitHub Pull Requests REST API Endpoints ---
+
+@app.post("/pulls")
+async def api_create_pull_request(
+    req: CreatePullRequestRequest,
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    try:
+        return await pr_service.create_pull_request(
+            repo, req.title, req.head, req.base, req.body, req.draft
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/pulls/search")
+async def api_search_pull_requests(
+    q: str = Query(..., description="search query"),
+    repo: str = Query(..., description="owner/repo"),
+) -> list[dict]:
+    try:
+        return await pr_service.search_pull_requests(repo, q)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/pulls/{number}")
+async def api_get_pull_request(
+    number: int,
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    try:
+        return await pr_service.get_pull_request(repo, number)
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@app.patch("/pulls/{number}")
+async def api_update_pull_request(
+    number: int,
+    req: UpdatePullRequestRequest,
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    try:
+        return await pr_service.update_pull_request(
+            repo, number, req.title, req.body, req.state, req.base
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/pulls/{number}/close")
+async def api_close_pull_request(
+    number: int,
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    try:
+        return await pr_service.close_pull_request(repo, number)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/pulls/{number}/reopen")
+async def api_reopen_pull_request(
+    number: int,
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    try:
+        return await pr_service.reopen_pull_request(repo, number)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/pulls/{number}/merge")
+async def api_merge_pull_request(
+    number: int,
+    req: MergePullRequestRequest,
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    try:
+        return await pr_service.merge_pull_request(
+            repo, number, req.commit_title, req.commit_message, req.merge_method
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/pulls")
+async def api_list_pull_requests(
+    repo: str = Query(..., description="owner/repo"),
+    state: str = Query("open", description="open | closed | all"),
+    head: str = Query(None),
+    base: str = Query(None),
+    sort: str = Query("created", description="created | updated | popularity | long-running"),
+    direction: str = Query("desc", description="asc | desc"),
+) -> list[dict]:
+    try:
+        return await pr_service.list_pull_requests(
+            repo, state, head, base, sort, direction
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+# --- Commit Inspection & Context Endpoints ---
+
+@app.get("/commits/{sha}/diff")
+async def api_get_commit_diff(sha: str, repo: str = Query(..., description="owner/repo")) -> dict:
+    try:
+        return await commit_service.get_commit_diff(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/commits/{sha}/files")
+async def api_get_commit_files(sha: str, repo: str = Query(..., description="owner/repo")) -> list:
+    try:
+        return await commit_service.get_commit_files(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/commits/{sha}/patch")
+async def api_get_commit_patch(sha: str, repo: str = Query(..., description="owner/repo")) -> dict:
+    try:
+        return await commit_service.get_commit_patch(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/commits/{sha}/stats")
+async def api_get_commit_stats(sha: str, repo: str = Query(..., description="owner/repo")) -> dict:
+    try:
+        return await commit_service.get_commit_stats(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/commits/{sha}/author")
+async def api_get_commit_author(sha: str, repo: str = Query(..., description="owner/repo")) -> dict:
+    try:
+        return await commit_service.get_commit_author(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/commits/{sha}/parents")
+async def api_get_commit_parents(sha: str, repo: str = Query(..., description="owner/repo")) -> dict:
+    try:
+        return await commit_service.get_commit_parents(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/commits/{sha}/branches")
+async def api_get_commit_branches(sha: str, repo: str = Query(..., description="owner/repo")) -> dict:
+    try:
+        return await commit_service.get_commit_branches(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/commits/{sha}/tags")
+async def api_get_commit_tags(sha: str, repo: str = Query(..., description="owner/repo")) -> dict:
+    try:
+        return await commit_service.get_commit_tags(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/commits/{sha}/signature")
+async def api_get_commit_signature(sha: str, repo: str = Query(..., description="owner/repo")) -> dict:
+    try:
+        return await commit_service.get_commit_signature(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/commits/{sha}/status")
+async def api_get_commit_status(sha: str, repo: str = Query(..., description="owner/repo")) -> dict:
+    try:
+        return await commit_service.get_commit_status(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/commits/{sha}/pulls")
+async def api_commit_pull_request(sha: str, repo: str = Query(..., description="owner/repo")) -> dict:
+    try:
+        return await commit_service.commit_pull_request(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/commits/{sha}/issues")
+async def api_commit_issue(sha: str, repo: str = Query(..., description="owner/repo")) -> dict:
+    try:
+        return await commit_service.commit_issue(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/commits/{sha}/reviews")
+async def api_commit_reviews(sha: str, repo: str = Query(..., description="owner/repo")) -> dict:
+    try:
+        return await commit_service.commit_reviews(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/commits/{sha}/discussions")
+async def api_commit_discussions(sha: str, repo: str = Query(..., description="owner/repo")) -> dict:
+    try:
+        return await commit_service.commit_discussions(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/commits/{sha}/release")
+async def api_commit_release(sha: str, repo: str = Query(..., description="owner/repo")) -> dict:
+    try:
+        return await commit_service.commit_release(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/commits/{sha}/workflows")
+async def api_commit_workflows(sha: str, repo: str = Query(..., description="owner/repo")) -> dict:
+    try:
+        return await commit_service.commit_workflows(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/commits/{sha}/deployments")
+async def api_commit_deployments(sha: str, repo: str = Query(..., description="owner/repo")) -> dict:
+    try:
+        return await commit_service.commit_deployments(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+# --- History & Blame Endpoints ---
+
+@app.get("/history/commits")
+async def api_commit_history(
+    repo: str = Query(..., description="owner/repo"),
+    branch: str = Query("main"),
+    path: str = Query(None),
+    since: str = Query(None),
+    until: str = Query(None),
+    author: str = Query(None),
+    max_count: int = Query(50),
+) -> dict:
+    try:
+        return await history_service.commit_history(
+            repo, branch, path, since, until, author, max_count
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/history/file")
+async def api_file_history(
+    path: str = Query(..., description="relative file path"),
+    repo: str = Query(..., description="owner/repo"),
+    branch: str = Query("main"),
+    max_count: int = Query(50),
+) -> dict:
+    try:
+        return await history_service.file_history(repo, path, branch, max_count)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/history/author")
+async def api_author_history(
+    author: str = Query(..., description="GitHub login or email"),
+    repo: str = Query(..., description="owner/repo"),
+    since: str = Query(None),
+    until: str = Query(None),
+    max_count: int = Query(50),
+) -> dict:
+    try:
+        return await history_service.author_history(repo, author, since, until, max_count)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/history/branch")
+async def api_branch_history(
+    branch: str = Query(..., description="branch name"),
+    repo: str = Query(..., description="owner/repo"),
+    base: str = Query(None),
+    max_count: int = Query(50),
+) -> dict:
+    try:
+        return await history_service.branch_history(repo, branch, base, max_count)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/history/graph")
+async def api_commit_graph(
+    repo: str = Query(..., description="owner/repo"),
+    branch: str = Query("main"),
+    max_count: int = Query(50),
+) -> dict:
+    try:
+        return await history_service.commit_graph(repo, branch, max_count)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/history/blame")
+async def api_blame_history(
+    path: str = Query(..., description="relative file path"),
+    repo: str = Query(..., description="owner/repo"),
+    branch: str = Query("main"),
+) -> dict:
+    try:
+        return await history_service.blame_history(repo, path, branch)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+# --- Search Endpoints ---
+
+@app.get("/search/commits")
+async def api_search_commits(
+    q: str = Query(..., description="search query"),
+    repo: str = Query(..., description="owner/repo"),
+    max_results: int = Query(30),
+) -> dict:
+    try:
+        return await search_service.search_commits(repo, q, max_results)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/search/commits/message")
+async def api_search_commit_message(
+    message: str = Query(..., description="message text"),
+    repo: str = Query(..., description="owner/repo"),
+    max_results: int = Query(30),
+) -> dict:
+    try:
+        return await search_service.search_commit_message(repo, message, max_results)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/search/commits/author")
+async def api_search_by_author(
+    author: str = Query(..., description="author name or email"),
+    repo: str = Query(..., description="owner/repo"),
+    max_results: int = Query(30),
+) -> dict:
+    try:
+        return await search_service.search_by_author(repo, author, max_results)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/search/commits/file")
+async def api_search_by_file(
+    path: str = Query(..., description="file path"),
+    repo: str = Query(..., description="owner/repo"),
+    max_results: int = Query(30),
+) -> dict:
+    try:
+        return await search_service.search_by_file(repo, path, max_results)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/search/commits/date")
+async def api_search_by_date(
+    since: str = Query(..., description="since date"),
+    repo: str = Query(..., description="owner/repo"),
+    until: str = Query(None),
+    max_results: int = Query(30),
+) -> dict:
+    try:
+        return await search_service.search_by_date(repo, since, until, max_results)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.get("/search/commits/hash")
+async def api_search_by_hash(
+    sha: str = Query(..., description="full or partial SHA"),
+    repo: str = Query(..., description="owner/repo"),
+) -> dict:
+    try:
+        return await search_service.search_by_hash(repo, sha)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+# --- Local Git Operation Endpoints ---
+
+@app.get("/git/status")
+async def api_git_status(repo_path: str = Query(None)) -> dict:
+    try:
+        return await git_service.git_status(repo_path)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.post("/git/commit")
+async def api_git_commit(req: GitCommitRequest) -> dict:
+    try:
+        return await git_service.git_commit(req.message, req.repo_path, req.add_all)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.post("/git/push")
+async def api_git_push(req: GitPushRequest) -> dict:
+    try:
+        return await git_service.git_push(req.repo_path, req.remote, req.branch, req.force)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.post("/git/pull")
+async def api_git_pull(req: GitPullRequest) -> dict:
+    try:
+        return await git_service.git_pull(req.repo_path, req.remote, req.branch, req.rebase)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.post("/git/switch")
+async def api_git_switch(req: GitSwitchBranchRequest) -> dict:
+    try:
+        return await git_service.git_switch_branch(req.branch, req.repo_path, req.create)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.post("/git/branch")
+async def api_git_branch(req: GitCreateBranchRequest) -> dict:
+    try:
+        return await git_service.git_create_branch(req.name, req.from_ref, req.repo_path, req.checkout)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.post("/git/merge")
+async def api_git_merge(req: GitMergeRequest) -> dict:
+    try:
+        return await git_service.git_merge(req.branch, req.repo_path, req.strategy, req.no_ff, req.message)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.post("/git/rebase")
+async def api_git_rebase(req: GitRebaseRequest) -> dict:
+    try:
+        return await git_service.git_rebase(req.onto, req.repo_path, req.interactive)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.post("/git/stash")
+async def api_git_stash(req: GitStashRequest) -> dict:
+    try:
+        return await git_service.git_stash(req.action, req.message, req.repo_path, req.index)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.post("/git/sync")
+async def api_git_sync(req: GitSyncRequest) -> dict:
+    try:
+        return await git_service.git_sync(req.repo_path, req.remote, req.branch)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+@app.post("/git/smart-push")
+async def api_git_smart_push(req: GitSmartPushRequest) -> dict:
+    try:
+        return await git_service.git_smart_push(
+            req.message, req.repo_path, req.remote, req.branch, req.add_all, req.force, req.pull_before_push
+        )
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
