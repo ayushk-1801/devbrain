@@ -7,16 +7,42 @@ Connect Claude Code to DevBrain for automatic context-aware coding.
 
 ## Prerequisites
 
-- DevBrain running (`docker-compose up`)
+- DevBrain API running (maintainer-hosted or `docker compose up`)
 - Claude Code CLI installed
-- `COGNEE_API_KEY` set in your environment
+- `DEVBRAIN_API_URL` pointing to the hosted DevBrain backend
 
 ## Configuration
 
-```bash
+Choose your setup method:
+
+```bash tab="Docker"
 claude mcp add devbrain -s project \
-  -e LLM_API_KEY="$COGNEE_API_KEY" \
-  -- uv --directory ./cognee-mcp run cognee-mcp
+  -- docker run -i --rm \
+     -e DEVBRAIN_API_URL="http://host.docker.internal:8000" \
+     devbrain python -m backend.mcp_server
+```
+
+```bash tab="Python"
+claude mcp add devbrain -s project \
+  -e DEVBRAIN_API_URL="http://localhost:8000" \
+  -- python -m backend.mcp_server
+```
+
+For attributed write actions (creating issues, commenting, etc.), add your own GitHub token to either setup:
+
+```bash tab="Docker"
+claude mcp add devbrain -s project \
+  -- docker run -i --rm \
+     -e DEVBRAIN_API_URL="https://devbrain.your-company.com" \
+     -e GITHUB_USER_TOKEN="github_pat_..." \
+     devbrain python -m backend.mcp_server
+```
+
+```bash tab="Python"
+claude mcp add devbrain -s project \
+  -e DEVBRAIN_API_URL="https://devbrain.your-company.com" \
+  -e GITHUB_USER_TOKEN="github_pat_..." \
+  -- python -m backend.mcp_server
 ```
 
 Once configured, Claude Code automatically calls DevBrain in every session to understand the context behind the code it's working on.

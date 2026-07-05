@@ -13,10 +13,12 @@ GET /query?q={question}&repo={owner/repo}
 
 ### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `q` | string | yes | Natural language question |
-| `repo` | string | yes | Target repository |
+<TypeTable
+  type={{
+    q: { type: "string", description: "Natural language question (required)" },
+    repo: { type: "string", description: "Target repository as `owner/repo` (required)" },
+  }}
+/>
 
 ### Example
 
@@ -41,7 +43,9 @@ curl "http://localhost:8000/query?q=why+was+auth+refactored&repo=owner/your-repo
 
 ## Query Modes
 
-DevBrain supports multiple retrieval modes:
+<Callout type="info">
+DevBrain supports multiple retrieval modes depending on the type of question.
+</Callout>
 
 - **Hybrid (default)** - automatically routes between semantic and graph traversal
 - **Graph Completion** - best for "why" questions requiring multi-hop reasoning

@@ -4,7 +4,13 @@
   "pages": [
     "index",
     "claude-code",
+    "codex",
     "cursor",
-    "opencode"
+    "opencode",
+    "zed",
+    "copilot",
+    "antigravity",
+    "generic",
+    "other"
   ]
 }

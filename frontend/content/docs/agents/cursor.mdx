@@ -10,17 +10,34 @@ Cursor supports MCP servers natively, allowing it to query DevBrain during devel
 1. Open Cursor Settings → Features → MCP Servers
 2. Add a new MCP server:
 
-```json
+```json tab="Docker"
+{
+  "name": "devbrain",
+  "command": "docker",
+  "args": [
+    "run", "-i", "--rm",
+    "-e", "DEVBRAIN_API_URL=http://host.docker.internal:8000",
+    "devbrain",
+    "python", "-m", "backend.mcp_server"
+  ]
+}
+```
+
+```json tab="Python"
 {
   "name": "devbrain",
   "type": "command",
-  "command": "uv",
-  "args": ["--directory", "./cognee-mcp", "run", "cognee-mcp"],
+  "command": "python",
+  "args": ["-m", "backend.mcp_server"],
   "env": {
-    "LLM_API_KEY": "$COGNEE_API_KEY"
+    "DEVBRAIN_API_URL": "http://localhost:8000"
   }
 }
 ```
+
+<Callout type="tip" title="Write Actions">
+Add `GITHUB_USER_TOKEN` to the `env` block for attributed write actions (creating issues, commenting, etc.).
+</Callout>
 
 3. Save and restart Cursor
 

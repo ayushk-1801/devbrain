@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 
 export const PLATFORM_API = 'http://localhost:9000';
 const TOKEN_KEY = 'devbrain_token';
+const DEPLOYED_URL = import.meta.env.VITE_DEPLOYED_URL || '';
 
 interface User {
   id: number;
@@ -46,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showDeployModal, setShowDeployModal] = useState(false);
 
   useEffect(() => {
     // Step 1: Check URL for ?token=... query param
@@ -85,6 +87,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = () => {
+    if (DEPLOYED_URL && window.location.origin === DEPLOYED_URL) {
+      setShowDeployModal(true);
+      return;
+    }
     window.location.href = `${PLATFORM_API}/auth/github/login`;
   };
 
@@ -96,9 +102,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
-      {children}
-    </AuthContext.Provider>
+    <>
+      {showDeployModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-bg-card rounded-2xl border border-border-soft p-8 max-w-md w-full shadow-2xl">
+            <h3 className="font-display font-bold text-lg text-text-primary">Infrastructure Not Ready</h3>
+            <p className="text-text-muted text-sm mt-3 leading-relaxed">
+              The hosted version of DevBrain is not ready yet. You can self-host it
+              on your own infrastructure to get started right away.
+            </p>
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                onClick={() => setShowDeployModal(false)}
+                className="px-5 py-2.5 rounded-xl border border-border-soft text-text-primary text-sm font-medium cursor-pointer hover:bg-bg-secondary transition-colors"
+              >
+                Cancel
+              </button>
+              <a
+                href="/docs"
+                onClick={() => setShowDeployModal(false)}
+                className="px-5 py-2.5 rounded-xl bg-btn-dark text-btn-dark-text text-sm font-medium cursor-pointer hover:bg-btn-dark-hover transition-colors text-center no-underline"
+              >
+                Self-Host
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+      <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
+        {children}
+      </AuthContext.Provider>
+    </>
   );
 }
 

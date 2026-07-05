@@ -1,13 +1,13 @@
 ---
-title: OpenCode
-description: Connect OpenCode to DevBrain for context-aware terminal coding.
+title: Antigravity
+description: Connect Google Antigravity to DevBrain via MCP.
 ---
 
-[OpenCode](https://opencode.ai) is an open-source terminal-based coding agent. Connect it to DevBrain via MCP for full codebase context.
+[Antigravity](https://antigravity.google) is Google's agent-first IDE, powered by Gemini. It supports MCP servers through a shared configuration format across the IDE, CLI, and SDK.
 
 ## Setup
 
-Add DevBrain to your OpenCode MCP configuration:
+Edit the global config at `~/.gemini/config/mcp_config.json` or workspace-level `.agents/mcp_config.json`:
 
 ```json tab="Docker"
 {
@@ -39,8 +39,14 @@ Add DevBrain to your OpenCode MCP configuration:
 }
 ```
 
+### Via IDE Panel
+
+In the Antigravity IDE, click **...** → **MCP Servers** → **Manage MCP Servers** → **View raw config**, then paste the JSON above into the editor.
+
+### Via CLI
+
+In the Antigravity CLI, type `/mcp` to open the interactive MCP Manager overlay and add the server there.
+
 <Callout type="tip" title="Write Actions">
 Add `GITHUB_USER_TOKEN` to the `env` block for attributed write actions (creating issues, commenting, etc.).
 </Callout>
-
-OpenCode will then query DevBrain automatically during coding sessions, surfacing relevant historical context alongside its code suggestions.

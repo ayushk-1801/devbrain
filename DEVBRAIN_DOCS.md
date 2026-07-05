@@ -175,7 +175,7 @@ devbrain/
 │       ├── crypto.py             # Fernet encryption for tenant secrets
 │       └── provisioner.py        # Docker-based per-tenant instance provisioning
 │
-├── frontend/                     # React + TypeScript frontend (port 3000)
+├── frontend/                     # React + TypeScript frontend (port 3000; `npm run dev`)
 │   ├── index.html                # HTML entry point
 │   ├── package.json              # Node dependencies
 │   ├── tsconfig.json             # TypeScript config
@@ -245,92 +245,137 @@ Webhooks verify the `X-Hub-Signature-256` HMAC against `GITHUB_WEBHOOK_SECRET`.
 | Method | Route | Description |
 |--------|-------|-------------|
 | `GET` | `/query` | Ask a natural-language question (supports `?repo=`, `?mode=hybrid\|why\|chunks`) |
-| `GET` | `/recall` | Raw memory recall with optional dataset filter |
 | `GET` | `/graph` | Export full knowledge graph (JSON with nodes + edges) |
 | `GET` | `/health` | Health check |
 
 #### Ingestion
 | Method | Route | Description |
 |--------|-------|-------------|
-| `POST` | `/sync` | Trigger full repo sync (body: `{repo, sync_history_days}`) |
-| `POST` | `/ingest/commit` | Ingest single commit (body: `{repo, sha}`) |
-| `POST` | `/ingest/pr` | Ingest single PR (body: `{repo, number}`) |
-| `POST` | `/ingest/issue` | Ingest single issue (body: `{repo, number}`) |
+| `POST` | `/ingest` | Trigger full repo sync (body: `{repo, sync_history_days}`) |
+| `POST` | `/refresh` | Trigger memory refresh for one or all repos (query: `?repo=...`) |
 
 #### Registry
 | Method | Route | Description |
 |--------|-------|-------------|
 | `GET` | `/repos` | List all ingested repos |
-| `POST` | `/repos/add` | Register a repo (body: `{repo}`) |
-| `DELETE` | `/repos/remove` | Remove a repo (body: `{repo}`) |
 
-#### GitHub Read / Write Operations
+#### Module Management
 | Method | Route | Description |
 |--------|-------|-------------|
-| `GET` | `/commits/{sha}/diff` | Get commit diff |
-| `GET` | `/commits/{sha}/context` | Get commit context (PRs, issues, releases, deployments) |
-| `GET` | `/history/commits` | List commits (supports pagination, sha, branch, path, author filters) |
-| `GET` | `/history/file` | File change history |
-| `GET` | `/history/author` | Author contribution history |
-| `GET` | `/history/branches` | Branch list |
-| `GET` | `/history/commit-graph` | Commit graph (branch topology) |
-| `GET` | `/history/blame` | Line-level blame for a file |
-| `GET` | `/search/commits` | Search commits by query |
-| `GET` | `/prs/{number}` | Get PR details |
-| `POST` | `/prs` | Create a pull request |
-| `POST` | `/prs/{number}/merge` | Merge a pull request |
-| `POST` | `/prs/{number}/comment` | Add PR review comment |
+| `DELETE` | `/module/{owner}/{repo}/{module}` | Surgically prune a deprecated module's subgraph |
+
+#### GitHub Issues
+| Method | Route | Description |
+|--------|-------|-------------|
+| `POST` | `/issues` | Create an issue (requires `X-GitHub-User-Token`) |
+| `GET` | `/issues` | List issues with optional filters |
+| `GET` | `/issues/search` | Search issues by query |
+| `GET` | `/issues/my-issues` | List issues for a specific user |
 | `GET` | `/issues/{number}` | Get issue details |
-| `POST` | `/issues` | Create an issue |
-| `PATCH` | `/issues/{number}` | Update an issue |
-| `POST` | `/issues/{number}/comments` | Add issue comment |
-| `POST` | `/issues/{number}/label` | Add label |
-| `DELETE` | `/issues/{number}/label` | Remove label |
-| `POST` | `/issues/{number}/assign` | Add assignees |
-| `DELETE` | `/issues/{number}/assign` | Remove assignees |
-| `POST` | `/issues/{number}/close` | Close an issue |
-| `POST` | `/issues/{number}/reopen` | Reopen an issue |
+| `PATCH` | `/issues/{number}` | Update an issue (requires `X-GitHub-User-Token`) |
+| `POST` | `/issues/{number}/close` | Close an issue (requires `X-GitHub-User-Token`) |
+| `POST` | `/issues/{number}/reopen` | Reopen an issue (requires `X-GitHub-User-Token`) |
+| `POST` | `/issues/{number}/comments` | Add issue comment (requires `X-GitHub-User-Token`) |
+| `GET` | `/issues/{number}/comments` | List issue comments |
+| `POST` | `/issues/{number}/labels` | Add labels (requires `X-GitHub-User-Token`) |
+| `PUT` | `/issues/{number}/labels` | Replace all labels (requires `X-GitHub-User-Token`) |
+| `DELETE` | `/issues/{number}/labels/{label_name}` | Remove a label (requires `X-GitHub-User-Token`) |
+| `POST` | `/issues/{number}/assign` | Add assignees (requires `X-GitHub-User-Token`) |
+| `POST` | `/issues/{number}/unassign` | Remove assignees (requires `X-GitHub-User-Token`) |
+| `POST` | `/comments/{comment_id}` | Edit a comment (requires `X-GitHub-User-Token`) |
+| `DELETE` | `/comments/{comment_id}` | Delete a comment (requires `X-GitHub-User-Token`) |
+| `GET` | `/labels` | List all labels |
+| `POST` | `/labels` | Create a new label |
+| `GET` | `/assignees` | List assignable users |
+
+#### GitHub Pull Requests
+| Method | Route | Description |
+|--------|-------|-------------|
+| `POST` | `/pulls` | Create a pull request |
+| `GET` | `/pulls` | List pull requests with filters |
+| `GET` | `/pulls/search` | Search pull requests by query |
+| `GET` | `/pulls/{number}` | Get PR details |
+| `PATCH` | `/pulls/{number}` | Update PR title/body/state/base |
+| `POST` | `/pulls/{number}/merge` | Merge a pull request |
+| `POST` | `/pulls/{number}/close` | Close a pull request |
+| `POST` | `/pulls/{number}/reopen` | Reopen a pull request |
+
+#### Commit Inspection
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/commits/{sha}/diff` | Get commit unified diff |
+| `GET` | `/commits/{sha}/files` | List files changed in a commit |
+| `GET` | `/commits/{sha}/patch` | Get raw patches |
+| `GET` | `/commits/{sha}/stats` | Get add/delete stats |
+| `GET` | `/commits/{sha}/author` | Get commit author details |
+| `GET` | `/commits/{sha}/parents` | Get parent SHAs |
+| `GET` | `/commits/{sha}/branches` | Get branches containing this commit |
+| `GET` | `/commits/{sha}/tags` | Get tags pointing to this commit |
+| `GET` | `/commits/{sha}/signature` | Get GPG/SSH signature status |
+| `GET` | `/commits/{sha}/status` | Get combined status checks |
+| `GET` | `/commits/{sha}/pulls` | Get PRs containing this commit |
+| `GET` | `/commits/{sha}/issues` | Get issues referenced by this commit |
+| `GET` | `/commits/{sha}/reviews` | Get PR reviews for this commit |
+| `GET` | `/commits/{sha}/discussions` | Get discussion comments for this commit |
+| `GET` | `/commits/{sha}/release` | Get release associated with this commit |
+| `GET` | `/commits/{sha}/workflows` | Get workflow runs for this commit |
+| `GET` | `/commits/{sha}/deployments` | Get deployments containing this commit |
+
+#### History
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/history/commits` | List commits (supports filters: branch, path, author, date range) |
+| `GET` | `/history/file` | File revision history |
+| `GET` | `/history/author` | Author contribution history |
+| `GET` | `/history/branch` | Branch commit history |
+| `GET` | `/history/graph` | Commit graph (branch topology) |
+| `GET` | `/history/blame` | Line-level blame for a file |
+
+#### Commit Search
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/search/commits` | Search commits by query |
+| `GET` | `/search/commits/message` | Search commits by message text |
+| `GET` | `/search/commits/author` | Search commits by author |
+| `GET` | `/search/commits/file` | Search commits by file path |
+| `GET` | `/search/commits/date` | Search commits by date range |
+| `GET` | `/search/commits/hash` | Look up commit by SHA |
 
 #### Changelog
 | Method | Route | Description |
 |--------|-------|-------------|
-| `POST` | `/changelog/generate/global` | Generate global changelog |
-| `POST` | `/changelog/generate/user` | Generate user update digest |
-| `POST` | `/changelog/subscribe` | Register webhook URL for notifications |
-| `POST` | `/changelog/subscribe/user` | Subscribe a user to updates |
-| `DELETE` | `/changelog/subscribe/user` | Unsubscribe a user |
+| `POST` | `/changelog/generate` | Generate global changelog for a repo (supports `?notify=true`) |
+| `POST` | `/changelog/backfill` | Backfill historical user profiles from GitHub |
+| `GET` | `/changelog` | Read the latest global changelog |
+| `GET` | `/changelog/user/{username}` | Get update digest for a user (supports `?refresh=true`) |
+| `GET` | `/changelog/user/{username}/notifications` | Check new @mentions and file touches |
+| `POST` | `/changelog/subscribe` | Subscribe a user to update digests |
 | `GET` | `/changelog/subscribers` | List subscribed users |
-
-#### Memory Management
-| Method | Route | Description |
-|--------|-------|-------------|
-| `POST` | `/memory/refresh` | Trigger weekly memory refresh for all repos |
-| `POST` | `/memory/forget` | Deprecate a module |
-| `POST` | `/memory/forget/repo` | Forget a repo entirely |
 
 #### Jobs
 | Method | Route | Description |
 |--------|-------|-------------|
-| `GET` | `/jobs` | List recent jobs |
 | `GET` | `/jobs/{job_id}` | Get job status |
 
 #### Local Git Operations
 | Method | Route | Description |
 |--------|-------|-------------|
-| `POST` | `/git/status` | Git status |
-| `POST` | `/git/log` | Git log |
-| `POST` | `/git/diff` | Git diff |
-| `POST` | `/git/show` | Show commit |
-| `POST` | `/git/branch` | List branches |
-| `POST` | `/git/diff-branch` | Diff branches |
+| `GET` | `/git/status` | Git status |
 | `POST` | `/git/commit` | Create commit |
-| `POST` | `/git/stage` | Stage files |
 | `POST` | `/git/push` | Push to remote |
 | `POST` | `/git/pull` | Pull from remote |
+| `POST` | `/git/switch` | Switch/checkout branch |
+| `POST` | `/git/branch` | Create branch |
+| `POST` | `/git/merge` | Merge branches |
 | `POST` | `/git/rebase` | Rebase (with warnings) |
-| `POST` | `/git/reset` | Reset (with warnings) |
+| `POST` | `/git/stash` | Stash operations |
+| `POST` | `/git/sync` | Pull + push in one step |
 | `POST` | `/git/smart-push` | Stage → commit → push (atomic) |
-| `GET` | `/git/read-file` | Read file from git |
+
+#### Webhook
+| Method | Route | Description |
+|--------|-------|-------------|
+| `POST` | `/webhook/github` | GitHub webhook receiver (HMAC-verified) |
 
 ---
 

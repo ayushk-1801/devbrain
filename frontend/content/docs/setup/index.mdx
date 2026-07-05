@@ -3,34 +3,91 @@ title: Overview
 description: DevBrain setup overview - prerequisites and environment configuration.
 ---
 
-# Setup Overview
+DevBrain runs on Cognee, which supports two deployment modes:
 
-DevBrain can be deployed using Docker Compose (recommended) or run locally with Python. Both approaches require the same prerequisites.
+- **Cognee Cloud:** hosted graph, vector, and relational stores. No local infra beyond the ingestion server. Recommended for most users.
+- **Local mode:** file-based Kuzu graph + LanceDB vector + SQLite. LLM and embeddings via Gemini API. Zero cloud dependency.
+
+Both approaches share the same prerequisites.
 
 ## Prerequisites
 
 - **Python 3.11+** (for local setup)
 - **Docker & Docker Compose** (for containerized setup)
 - **Redis** (local setup only; Docker includes it)
-- **OpenAI API key** (or any Cognee-supported LLM provider)
+- **Gemini API key** (default for local mode; get one at [aistudio.google.com/apikey](https://aistudio.google.com/apikey))
+- **Cognee Cloud account** (optional; sign up at [cognee.ai](https://cognee.ai))
 - **GitHub PAT** with `repo` read and webhook access
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and configure:
+Copy `.env.example` to `.env` and configure the relevant variables for your chosen mode:
 
-| Variable | Description |
-|----------|-------------|
-| `OPENAI_API_KEY` | LLM provider API key |
-| `GITHUB_TOKEN` | GitHub PAT with repo + webhook scope |
-| `GITHUB_REPO` | Default repo to ingest (`owner/repo`) |
-| `GITHUB_WEBHOOK_SECRET` | Secret for webhook signature verification |
-| `COGNEE_DATA_DIR` | Local Cognee data directory |
-| `COGNEE_SYSTEM_DIR` | Local Cognee system directory |
+```bash tab="Cognee Cloud"
+# Hosted stores - no local vector/graph infrastructure
+COGNEE_BASE_URL=https://your-instance.cognee.ai
+COGNEE_API_KEY=your_cognee_api_key
 
-## Choosing an Approach
+# GitHub access (required for both modes)
+GITHUB_TOKEN=ghp_...
+GITHUB_REPO=owner/your-repo
+GITHUB_WEBHOOK_SECRET=...
+```
 
-- **Docker** - one command, zero dependency management, includes Redis
-- **Local** - full control, requires manual Redis + worker process management
+```bash tab="Local Mode"
+# File-based stores - Kuzu + LanceDB + SQLite, LLM via Gemini
+GEMINI_API_KEY=...
+LLM_PROVIDER=gemini
+COGNEE_DATA_DIR=./.cognee/data
+COGNEE_SYSTEM_DIR=./.cognee/system
 
-See the [Docker](./docker) and [Local](./local) pages for detailed instructions.
+# GitHub access (required for both modes)
+GITHUB_TOKEN=ghp_...
+GITHUB_REPO=owner/your-repo
+GITHUB_WEBHOOK_SECRET=...
+```
+
+### For Both Modes
+
+<TypeTable
+  type={{
+    GITHUB_TOKEN: { type: "string", description: "GitHub PAT with repo + webhook scope" },
+    GITHUB_REPO: { type: "string", description: "Default repo to ingest as `owner/repo`" },
+    GITHUB_WEBHOOK_SECRET: { type: "string", description: "Secret for webhook signature verification" },
+  }}
+/>
+
+### Cognee Cloud
+
+<TypeTable
+  type={{
+    COGNEE_BASE_URL: { type: "string", description: "Your Cognee Cloud instance URL" },
+    COGNEE_API_KEY: { type: "string", description: "Cognee Cloud API key (leave empty to fall back to local mode)" },
+  }}
+/>
+
+### Local Mode
+
+<TypeTable
+  type={{
+    GEMINI_API_KEY: { type: "string", description: "Google Gemini API key for LLM + embeddings" },
+    LLM_PROVIDER: { type: "'gemini' | 'openai' | 'anthropic'", description: "LLM provider (default: gemini)" },
+    COGNEE_DATA_DIR: { type: "string", description: "Local Cognee data directory (default: `./.cognee/data`)" },
+    COGNEE_SYSTEM_DIR: { type: "string", description: "Local Cognee system directory (default: `./.cognee/system`)" },
+  }}
+/>
+
+## Choose Your Setup
+
+<Cards>
+  <Card
+    title="Docker (Recommended)"
+    description="One command, zero dependency management, includes Redis. Ideal for most users."
+    href="./docker"
+  />
+  <Card
+    title="Manual"
+    description="Full control over the stack. Requires manual Redis and worker process management."
+    href="./manual"
+  />
+</Cards>

@@ -20,13 +20,13 @@ const AGENTS = [
     copyText: (url: string, runMode: 'python' | 'docker') => 
       runMode === 'python'
         ? `claude mcp add devbrain -s project -e DEVBRAIN_API_URL="${url}" -- python -m backend.mcp_server`
-        : `claude mcp add devbrain -s project -- docker run -i --rm -e DEVBRAIN_API_URL="${url}" devbrain-mcp`,
+        : `claude mcp add devbrain -s project -- docker run -i --rm -e DEVBRAIN_API_URL="${url}" devbrain python -m backend.mcp_server`,
     mode: 'shell',
   },
   {
     id: 'codex',
     name: 'Codex',
-    icon: '/codex-color-removebg-preview.png',
+    icon: '/codex-color.svg',
     description: {
       python: '1. Open or create your Codex configuration file at ~/.codex/config.toml.\n2. Locate the [mcp_servers] parent section.\n3. Append the following TOML configuration block to enable DevBrain via local Python:',
       docker: '1. Make sure Docker is running on your machine.\n2. Open your Codex config at ~/.codex/config.toml.\n3. Append the following TOML block to run DevBrain containerized via Docker:'
@@ -34,27 +34,68 @@ const AGENTS = [
     copyText: (url: string, runMode: 'python' | 'docker') => 
       runMode === 'python'
         ? `[mcp_servers.devbrain]\ncommand = "python"\nargs = ["-m", "backend.mcp_server"]\nenv = { "DEVBRAIN_API_URL" = "${url}" }`
-        : `[mcp_servers.devbrain]\ncommand = "docker"\nargs = ["run", "-i", "--rm", "-e", "DEVBRAIN_API_URL=${url}", "devbrain-mcp"]`,
+        : `[mcp_servers.devbrain]\ncommand = "docker"\nargs = ["run", "-i", "--rm", "-e", "DEVBRAIN_API_URL=${url}", "devbrain", "python", "-m", "backend.mcp_server"]`,
     mode: 'toml',
   },
   {
     id: 'cursor',
     name: 'Cursor',
-    icon: '/cursor.png',
+    icon: '/cursor-light.png',
+    iconDark: '/cursor-dark.png',
     description: {
       python: '1. Open Cursor Settings (click the gear icon in the top right or use shortcut).\n2. Navigate to Features > MCP in the sidebar.\n3. Click "+ Add New MCP Server".\n4. Set Name: "devbrain", Type: "command", and paste the following Python command:',
       docker: '1. Make sure Docker is running on your machine.\n2. Open Cursor Settings and navigate to Features > MCP in the sidebar.\n3. Click "+ Add New MCP Server".\n4. Set Name: "devbrain", Type: "command", and paste the following Docker run command:'
     },
     copyText: (url: string, runMode: 'python' | 'docker') => 
       runMode === 'python'
-        ? `python -m backend.mcp_server --api-url "${url}"`
-        : `docker run -i --rm -e DEVBRAIN_API_URL="${url}" devbrain-mcp`,
+        ? `python -m backend.mcp_server`
+        : `docker run -i --rm -e DEVBRAIN_API_URL="${url}" devbrain python -m backend.mcp_server`,
     mode: 'command',
   },
   {
+    id: 'opencode',
+    name: 'OpenCode',
+    icon: '/opencode-light.svg',
+    iconDark: '/opencode-dark.svg',
+    description: {
+      python: '1. Open your global or project-level opencode.jsonc file.\n2. Locate the "mcp" config key.\n3. Paste the following JSON block under the mcp definition:',
+      docker: '1. Make sure Docker is running on your machine.\n2. Open your global or project-level opencode.jsonc file.\n3. Paste the following JSON block under the mcp definition to connect DevBrain via Docker:'
+    },
+    copyText: (url: string, runMode: 'python' | 'docker') => 
+      runMode === 'python'
+        ? JSON.stringify({
+            "devbrain": {
+              "type": "local",
+              "command": ["python", "-m", "backend.mcp_server"],
+              "enabled": true,
+              "environment": {
+                "DEVBRAIN_API_URL": url
+              }
+            }
+          }, null, 2)
+        : JSON.stringify({
+            "devbrain": {
+              "type": "local",
+              "command": [
+                "docker",
+                "run",
+                "-i",
+                "--rm",
+                "-e",
+                `DEVBRAIN_API_URL=${url}`,
+                "devbrain",
+                "python", "-m", "backend.mcp_server"
+              ],
+              "enabled": true
+            }
+          }, null, 2),
+    mode: 'json',
+  },
+  {
     id: 'zed',
-    name: 'Zed Editor',
-    icon: '/Zed_Editor_Logo.png',
+    name: 'Zed',
+    icon: '/zed-dark.svg',
+    iconDark: '/zed-light.svg',
     description: {
       python: '1. Open your Zed configuration file (Command Palette > "zed: open settings" or Ctrl/Cmd + ,).\n2. Locate the "context_servers" block.\n3. Paste the following JSON server definition inside the context_servers section:',
       docker: '1. Make sure Docker is running on your machine.\n2. Open your Zed settings configuration file.\n3. Locate the "context_servers" block.\n4. Paste the following JSON block to run the server inside Docker:'
@@ -82,8 +123,39 @@ const AGENTS = [
                   "--rm",
                   "-e",
                   `DEVBRAIN_API_URL=${url}`,
-                  "devbrain-mcp"
+                  "devbrain",
+                  "python", "-m", "backend.mcp_server"
                 ]
+              }
+            }
+          }, null, 2),
+    mode: 'json',
+  },
+  {
+    id: 'copilot',
+    name: 'GitHub Copilot',
+    icon: '/github-copilot.svg',
+    iconDark: '/github-copilot-dark.svg',
+    description: {
+      python: '1. Open your VS Code settings (JSON) or .vscode/mcp.json.\n2. Locate the "servers" section under "mcp".\n3. Paste the following JSON server definition to connect DevBrain via local Python:',
+      docker: '1. Make sure Docker is running on your machine.\n2. Open your VS Code settings or .vscode/mcp.json.\n3. Paste the following JSON block to run DevBrain containerized via Docker:'
+    },
+    copyText: (url: string, runMode: 'python' | 'docker') =>
+      runMode === 'python'
+        ? JSON.stringify({
+            "servers": {
+              "devbrain": {
+                "command": "python",
+                "args": ["-m", "backend.mcp_server"],
+                "env": { "DEVBRAIN_API_URL": url }
+              }
+            }
+          }, null, 2)
+        : JSON.stringify({
+            "servers": {
+              "devbrain": {
+                "command": "docker",
+                "args": ["run", "-i", "--rm", "-e", `DEVBRAIN_API_URL=${url}`, "devbrain", "python", "-m", "backend.mcp_server"]
               }
             }
           }, null, 2),
@@ -92,7 +164,7 @@ const AGENTS = [
   {
     id: 'antigravity',
     name: 'Antigravity',
-    icon: '/google-antigravity.png',
+    icon: '/antigravity-color.svg',
     description: {
       python: '1. Ensure the Antigravity CLI is installed locally.\n2. Open your project directory in the terminal.\n3. Run the following command to register DevBrain as an MCP server:',
       docker: '1. Ensure the Antigravity CLI is installed and Docker is running.\n2. Open your project directory in the terminal.\n3. Run the command below to connect DevBrain containerized via Docker:'
@@ -100,61 +172,53 @@ const AGENTS = [
     copyText: (url: string, runMode: 'python' | 'docker') => 
       runMode === 'python'
         ? `agy mcp add devbrain -e DEVBRAIN_API_URL="${url}" -- python -m backend.mcp_server`
-        : `agy mcp add devbrain -- docker run -i --rm -e DEVBRAIN_API_URL="${url}" devbrain-mcp`,
+        : `agy mcp add devbrain -- docker run -i --rm -e DEVBRAIN_API_URL="${url}" devbrain python -m backend.mcp_server`,
     mode: 'shell',
   },
   {
-    id: 'opencode',
-    name: 'OpenCode',
-    icon: '/opencode-logo-removebg-preview.png',
+    id: 'generic',
+    name: 'Generic MCP',
+    icon: '/Model_Context_Protocol_logo.svg',
     description: {
-      python: '1. Open your global or project-level opencode.jsonc file.\n2. Locate the "mcp" config key.\n3. Paste the following JSON block under the mcp definition:',
-      docker: '1. Make sure Docker is running on your machine.\n2. Open your global or project-level opencode.jsonc file.\n3. Paste the following JSON block under the mcp definition to connect DevBrain via Docker:'
+      python: '1. For any MCP-compatible client not listed above.\n2. Add a new MCP server in your client\'s configuration (JSON, settings, or UI).\n3. Use the following config to point at DevBrain via local Python:',
+      docker: '1. For any MCP-compatible client not listed above.\n2. Make sure Docker is running on your machine.\n3. Use the following config to point at DevBrain via Docker:'
     },
-    copyText: (url: string, runMode: 'python' | 'docker') => 
+    copyText: (url: string, runMode: 'python' | 'docker') =>
       runMode === 'python'
         ? JSON.stringify({
-            "devbrain": {
-              "type": "local",
-              "command": ["python", "-m", "backend.mcp_server"],
-              "enabled": true,
-              "environment": {
-                "DEVBRAIN_API_URL": url
+            "mcpServers": {
+              "devbrain": {
+                "command": "python",
+                "args": ["-m", "backend.mcp_server"],
+                "env": { "DEVBRAIN_API_URL": url }
               }
             }
           }, null, 2)
         : JSON.stringify({
-            "devbrain": {
-              "type": "local",
-              "command": [
-                "docker",
-                "run",
-                "-i",
-                "--rm",
-                "-e",
-                `DEVBRAIN_API_URL=${url}`,
-                "devbrain-mcp"
-              ],
-              "enabled": true
+            "mcpServers": {
+              "devbrain": {
+                "command": "docker",
+                "args": ["run", "-i", "--rm", "-e", `DEVBRAIN_API_URL=${url}`, "devbrain", "python", "-m", "backend.mcp_server"]
+              }
             }
           }, null, 2),
     mode: 'json',
-  }
+  },
 ];
 
 const RUN_MODES = [
+  {
+    id: 'docker',
+    name: 'Docker',
+    icon: 'https://cdn.simpleicons.org/docker/2496ED',
+    description: 'Containerized execution'
+  },
   {
     id: 'python',
     name: 'Python',
     icon: 'https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg',
     description: 'Local Python execution'
   },
-  {
-    id: 'docker',
-    name: 'Docker',
-    icon: 'https://cdn.simpleicons.org/docker/2496ED',
-    description: 'Containerized execution'
-  }
 ] as const;
 
 function CopyButton({ text, label = 'Copy', compact = false, iconOnly = false }: { text: string; label?: string; compact?: boolean; iconOnly?: boolean }) {
@@ -342,7 +406,7 @@ const itemVariants = {
 
 export default function ConfigSheet({ instance, onClose }: ConfigSheetProps) {
   const [selectedAgent, setSelectedAgent] = useState(AGENTS[0]);
-  const [runMode, setRunMode] = useState<'python' | 'docker'>('python');
+  const [runMode, setRunMode] = useState<'python' | 'docker'>('docker');
   
   const repoName = instance.repo.split('/').pop() ?? instance.repo;
 
@@ -467,87 +531,114 @@ export default function ConfigSheet({ instance, onClose }: ConfigSheetProps) {
             </div>
           </motion.div>
 
-          {/* Select Agent grid */}
-          <motion.div variants={itemVariants} className="space-y-2">
-            <p className="text-[13px] font-bold text-text-muted">1. Select Coding Agent</p>
-            <div className="grid grid-cols-4 gap-2">
-              {AGENTS.map((agent) => {
-                const isSelected = selectedAgent.id === agent.id;
-                return (
-                  <motion.button
-                    key={agent.id}
-                    onClick={() => setSelectedAgent(agent)}
-                    whileTap={{ scale: 0.98 }}
-                    className={`relative flex flex-col items-center justify-center pt-[18px] pb-[18px] px-2 rounded-xl border transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-bg border-border-soft shadow-xs'
-                        : 'bg-bg-card border-border-soft/40 hover:bg-bg/40 hover:border-border-soft/80'
-                    }`}
-                  >
-                    <img
-                      src={agent.icon}
-                      alt={agent.name}
-                      className="w-8 h-8 object-contain opacity-90 transition-all duration-150 mb-1.5"
-                    />
-                    <span className={`text-[12.5px] text-text-primary text-center truncate w-full z-20 transition-all duration-100 ${
-                      isSelected ? 'font-bold' : 'font-medium opacity-80'
-                    }`}>
-                      {agent.name}
-                    </span>
-                  </motion.button>
-                );
-              })}
-            </div>
-          </motion.div>
+          {/* Stepper */}
+          <div className="relative pl-10 border-l border-border-soft">
+            {/* Step 1 */}
+            <motion.div variants={itemVariants} className="relative pb-10">
+              <div className="absolute -left-14 top-0 size-8 rounded-full bg-bg-secondary border border-border-soft flex items-center justify-center text-xs font-bold text-text-primary z-10 shadow-xs">
+                1
+              </div>
+              <div className="space-y-2">
+                <p className="text-[13px] font-bold text-text-muted pt-[5px]">Select Coding Agent</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {AGENTS.map((agent) => {
+                    const isSelected = selectedAgent.id === agent.id;
+                    return (
+                      <motion.button
+                        key={agent.id}
+                        onClick={() => setSelectedAgent(agent)}
+                        whileTap={{ scale: 0.98 }}
+                        className={`relative flex flex-col items-center justify-center pt-[18px] pb-[18px] px-2 rounded-xl border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-bg border-border-soft shadow-xs'
+                            : 'bg-bg-card border-border-soft/40 hover:bg-bg/40 hover:border-border-soft/80'
+                        }`}
+                      >
+                        {agent.iconDark ? (
+                          <>
+                            <img
+                              src={agent.icon}
+                              alt={agent.name}
+                              className="block dark:hidden w-8 h-8 object-contain opacity-90 transition-all duration-150 mb-4"
+                            />
+                            <img
+                              src={agent.iconDark}
+                              alt={agent.name}
+                              className="hidden dark:block w-8 h-8 object-contain opacity-90 transition-all duration-150 mb-4"
+                            />
+                          </>
+                        ) : (
+                          <img
+                            src={agent.icon}
+                            alt={agent.name}
+                            className={`w-8 h-8 object-contain opacity-90 transition-all duration-150 mb-4 ${agent.id === 'generic' ? 'dark:invert' : ''}`}
+                          />
+                        )}
+                        <span className={`text-[12.5px] text-text-primary text-center truncate w-full z-20 transition-all duration-100 ${
+                          isSelected ? 'font-bold' : 'font-medium opacity-80'
+                        }`}>
+                          {agent.name}
+                        </span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+            </motion.div>
 
-          {/* Select Run Mode (Python / Docker) */}
-          <motion.div variants={itemVariants} className="space-y-2">
-            <p className="text-[13px] font-bold text-text-muted">2. Select Connection Environment</p>
-            <div className="grid grid-cols-2 gap-2">
-              {RUN_MODES.map((modeOption) => {
-                const isSelected = runMode === modeOption.id;
-                return (
-                  <motion.button
-                    key={modeOption.id}
-                    onClick={() => setRunMode(modeOption.id)}
-                    whileTap={{ scale: 0.98 }}
-                    className={`relative flex flex-row items-center justify-start p-3 pl-6 gap-4 rounded-xl border transition-all cursor-pointer h-18 ${
-                      isSelected
-                        ? 'bg-bg border-border-soft shadow-xs'
-                        : 'bg-bg-card border-border-soft/40 hover:bg-bg/40 hover:border-border-soft/80'
-                    }`}
-                  >
-                    <img
-                      src={modeOption.icon}
-                      alt={modeOption.name}
-                      className="w-8 h-8 object-contain opacity-90 transition-all duration-150 shrink-0"
-                    />
-                    <div className="flex flex-col items-start min-w-0">
-                      <span className={`text-[12.5px] text-text-primary text-left truncate w-full z-20 transition-all duration-100 ${
-                        isSelected ? 'font-bold' : 'font-medium opacity-80'
-                      }`}>
-                        {modeOption.name}
-                      </span>
-                      <span className="text-[10px] text-text-muted text-left truncate w-full z-20 lowercase mt-0.5 leading-normal">
-                        {modeOption.description}
-                      </span>
-                    </div>
-                  </motion.button>
-                );
-              })}
-            </div>
-          </motion.div>
+            {/* Step 2 */}
+            <motion.div variants={itemVariants} className="relative pb-10">
+              <div className="absolute -left-14 top-0 size-8 rounded-full bg-bg-secondary border border-border-soft flex items-center justify-center text-xs font-bold text-text-primary z-10 shadow-xs">
+                2
+              </div>
+              <div className="space-y-2">
+                <p className="text-[13px] font-bold text-text-muted pt-[5px]">Select Connection Environment</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {RUN_MODES.map((modeOption) => {
+                    const isSelected = runMode === modeOption.id;
+                    return (
+                      <motion.button
+                        key={modeOption.id}
+                        onClick={() => setRunMode(modeOption.id)}
+                        whileTap={{ scale: 0.98 }}
+                        className={`relative flex flex-row items-center justify-start p-3 pl-6 gap-4 rounded-xl border transition-all cursor-pointer h-18 ${
+                          isSelected
+                            ? 'bg-bg border-border-soft shadow-xs'
+                            : 'bg-bg-card border-border-soft/40 hover:bg-bg/40 hover:border-border-soft/80'
+                        }`}
+                      >
+                        <img
+                          src={modeOption.icon}
+                          alt={modeOption.name}
+                          className="w-8 h-8 object-contain opacity-90 transition-all duration-150 shrink-0"
+                        />
+                        <div className="flex flex-col items-start min-w-0">
+                          <span className={`text-[12.5px] text-text-primary text-left truncate w-full z-20 transition-all duration-100 ${
+                            isSelected ? 'font-bold' : 'font-medium opacity-80'
+                          }`}>
+                            {modeOption.name}
+                          </span>
+                          <span className="text-[10px] text-text-muted text-left truncate w-full z-20 lowercase mt-0.5 leading-normal">
+                            {modeOption.description}
+                          </span>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+            </motion.div>
 
-          {/* Configuration instructions block */}
-          <motion.div
-            variants={itemVariants}
-            className="border-t border-border-soft/60 pt-4"
-          >
-            <div className="space-y-3">
-              <p className="text-[13px] font-bold text-text-muted">3. Setup Instructions</p>
-              <pre className="text-[11.5px] font-display font-medium text-text-muted leading-relaxed whitespace-pre-wrap break-words">
-                {selectedAgent.description[runMode]}
-              </pre>
+            {/* Step 3 */}
+            <motion.div variants={itemVariants} className="relative pb-0">
+              <div className="absolute -left-14 top-0 size-8 rounded-full bg-bg-secondary border border-border-soft flex items-center justify-center text-xs font-bold text-text-primary z-10 shadow-xs">
+                3
+              </div>
+              <div className="space-y-3">
+                <p className="text-[13px] font-bold text-text-muted pt-[5px]">Setup Instructions</p>
+                <pre className="text-[11.5px] font-display font-medium text-text-muted leading-relaxed whitespace-pre-wrap break-words">
+                  {selectedAgent.description[runMode]}
+                </pre>
 
               <div className="relative rounded-xl border border-border-soft bg-bg p-4 group/code shadow-xs">
                 <div className="absolute right-3 top-3">
@@ -561,7 +652,8 @@ export default function ConfigSheet({ instance, onClose }: ConfigSheetProps) {
               </div>
             </div>
           </motion.div>
-        </motion.div>
+        </div>
+      </motion.div>
       </motion.div>
     </>
   );

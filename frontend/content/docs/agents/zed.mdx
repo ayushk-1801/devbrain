@@ -1,17 +1,17 @@
 ---
-title: OpenCode
-description: Connect OpenCode to DevBrain for context-aware terminal coding.
+title: Zed
+description: Connect the Zed editor to DevBrain via MCP.
 ---
 
-[OpenCode](https://opencode.ai) is an open-source terminal-based coding agent. Connect it to DevBrain via MCP for full codebase context.
+[Zed](https://zed.dev) is a high-performance, multiplayer code editor. It supports MCP servers through the `context_servers` setting.
 
 ## Setup
 
-Add DevBrain to your OpenCode MCP configuration:
+Add to your Zed settings file at `~/.config/zed/settings.json` (or open Settings → Open Settings):
 
 ```json tab="Docker"
 {
-  "mcpServers": {
+  "context_servers": {
     "devbrain": {
       "command": "docker",
       "args": [
@@ -27,7 +27,7 @@ Add DevBrain to your OpenCode MCP configuration:
 
 ```json tab="Python"
 {
-  "mcpServers": {
+  "context_servers": {
     "devbrain": {
       "command": "python",
       "args": ["-m", "backend.mcp_server"],
@@ -39,8 +39,8 @@ Add DevBrain to your OpenCode MCP configuration:
 }
 ```
 
+Reload settings or restart Zed. The DevBrain tools become available to the Zed Agent automatically.
+
 <Callout type="tip" title="Write Actions">
 Add `GITHUB_USER_TOKEN` to the `env` block for attributed write actions (creating issues, commenting, etc.).
 </Callout>
-
-OpenCode will then query DevBrain automatically during coding sessions, surfacing relevant historical context alongside its code suggestions.

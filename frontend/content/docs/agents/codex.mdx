@@ -1,0 +1,43 @@
+---
+title: Codex CLI
+description: Connect OpenAI Codex CLI to DevBrain via MCP.
+---
+
+[Codex CLI](https://developers.openai.com/codex) is OpenAI's terminal-based coding agent. Codex stores MCP configuration in `~/.codex/config.toml`, shared between the CLI and IDE extension.
+
+## Via CLI
+
+```bash tab="Docker"
+codex mcp add devbrain -- docker run -i --rm -e DEVBRAIN_API_URL="http://host.docker.internal:8000" devbrain python -m backend.mcp_server
+```
+
+```bash tab="Python"
+codex mcp add devbrain --env DEVBRAIN_API_URL="http://localhost:8000" -- python -m backend.mcp_server
+```
+
+## Via config.toml
+
+Edit `~/.codex/config.toml`:
+
+```toml tab="Docker"
+[mcp_servers.devbrain]
+command = "docker"
+args = ["run", "-i", "--rm", "-e", "DEVBRAIN_API_URL=http://host.docker.internal:8000", "devbrain", "python", "-m", "backend.mcp_server"]
+```
+
+```toml tab="Python"
+[mcp_servers.devbrain]
+command = "python"
+args = ["-m", "backend.mcp_server"]
+
+[mcp_servers.devbrain.env]
+DEVBRAIN_API_URL = "http://localhost:8000"
+```
+
+## Verification
+
+Start a Codex session and type `/mcp` to confirm `devbrain` appears in the list of active servers.
+
+<Callout type="tip" title="Write Actions">
+Add `GITHUB_USER_TOKEN` to the env or Docker args for attributed write actions (creating issues, commenting, etc.).
+</Callout>

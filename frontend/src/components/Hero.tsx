@@ -45,9 +45,8 @@ export function Hero() {
         <h1 className="font-display text-[48px] md:text-[64px] lg:text-[70px] font-black text-text-primary leading-[1.05] max-w-[900px] tracking-tight">
           Your Codebase Has a<br />Memory. Ask It Anything.
         </h1>
-        <p className="font-display text-[16px] md:text-[18px] text-text-muted max-w-[580px] mt-6 leading-[1.7]">
-          DevBrain turns every commit, pull request, issue, release, and
-          architectural decision into a permanently queryable knowledge graph.
+        <p className="font-display text-[14px] md:text-[16px] text-text-muted max-w-[580px] mt-6 leading-[1.7]">
+          Every commit, PR, issue, and decision becomes a queryable knowledge graph.
           Stop guessing why code exists - get sourced answers in seconds.
         </p>
          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mt-10 w-full sm:w-auto px-4 sm:px-0">

@@ -8,7 +8,7 @@ DevBrain provides endpoints to create, read, update, and manage GitHub issues di
 ## Create an Issue
 
 ```http
-POST /api/issues
+POST /issues
 ```
 
 ```json
@@ -24,23 +24,25 @@ POST /api/issues
 ## List Issues
 
 ```http
-GET /api/issues?repo=owner/repo-name&state=open
+GET /issues?repo=owner/repo-name&state=open
 ```
 
 ### Filters
 
-| Parameter | Description |
-|-----------|-------------|
-| `state` | `open`, `closed`, or `all` |
-| `assignee` | Filter by assignee |
-| `creator` | Filter by creator |
-| `mentioned` | Filter by mentioned user |
-| `labels` | Comma-separated label names |
+<TypeTable
+  type={{
+    state: { type: "'open' | 'closed' | 'all'", description: "Filter by issue state" },
+    assignee: { type: "string", description: "Filter by assignee username" },
+    creator: { type: "string", description: "Filter by creator username" },
+    mentioned: { type: "string", description: "Filter by mentioned user" },
+    labels: { type: "string", description: "Comma-separated label names" },
+  }}
+/>
 
 ## Update an Issue
 
 ```http
-PATCH /api/issues/{number}
+PATCH /issues/{number}
 ```
 
 ```json
@@ -53,9 +55,11 @@ PATCH /api/issues/{number}
 ## Close / Reopen
 
 ```http
-PATCH /api/issues/{number}
+POST /issues/{number}/close
+POST /issues/{number}/reopen
 ```
 
-```json
-{ "state": "closed" }
-```
+<Callout type="info" title="Authentication">
+Requires `X-GitHub-User-Token` header (your own GitHub PAT) for write actions.
+See the [agent setup docs](../agents/claude-code) for details.
+</Callout>
