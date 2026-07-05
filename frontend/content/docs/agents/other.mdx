@@ -1,6 +1,6 @@
 ---
 title: Other MCP Clients
-description: Connect Windsurf, Continue.dev, Cline, Junie, Gemini CLI, Bito, and more to DevBrain.
+description: Connect Windsurf, Continue.dev, Cline, Junie, Bito, and more to DevBrain.
 ---
 
 These clients don't have dedicated pages but work with DevBrain using standard MCP configuration.
@@ -94,26 +94,6 @@ Cline is a VS Code extension for autonomous coding. Add via its MCP server confi
 ```
 
 ```json tab="Python"
-{
-  "mcpServers": {
-    "devbrain": {
-      "command": "python",
-      "args": ["-m", "backend.mcp_server"],
-      "env": {
-        "DEVBRAIN_API_URL": "http://localhost:8000"
-      }
-    }
-  }
-}
-```
-
-## Gemini CLI
-
-Google's Gemini CLI (now part of the Antigravity suite) supports MCP through its settings:
-
-Edit `~/.gemini/settings.json`:
-
-```json
 {
   "mcpServers": {
     "devbrain": {
