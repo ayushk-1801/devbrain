@@ -96,6 +96,9 @@ export function Navbar() {
             <Link to="/docs" className="text-[14px] md:text-[15px] font-medium text-text-primary hover:underline underline-offset-4 decoration-1">
               Docs
             </Link>
+            <a href="https://drive.google.com/file/d/1R2YT2FPfhLg1qgI5UIA9LjjtC3WWwyQN/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="text-[14px] md:text-[15px] font-medium text-text-primary hover:underline underline-offset-4 decoration-1">
+              Demo
+            </a>
           </div>
         )}
 
@@ -223,6 +226,15 @@ export function Navbar() {
                 >
                   Docs
                 </Link>
+                <a 
+                  href="https://drive.google.com/file/d/1R2YT2FPfhLg1qgI5UIA9LjjtC3WWwyQN/view?usp=sharing" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-[15px] font-medium text-text-primary py-1.5 border-b border-border-soft/60"
+                >
+                  Demo
+                </a>
               </>
             )}
             <button
