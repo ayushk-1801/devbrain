@@ -7,13 +7,17 @@ description: Deploy DevBrain using Docker.
 Pull the ready-to-use image instead of building locally:
 
 ```bash
-docker run -d -p 8000:8000 ayushk1801/devbrain
+cp .env.example .env
+# fill in your secrets, then:
+docker run -d -p 8000:8000 --env-file .env ayushk1801/devbrain
 ```
 
 Available at [hub.docker.com/r/ayushk1801/devbrain](https://hub.docker.com/r/ayushk1801/devbrain).
+
+Env vars are documented in the [Overview](/docs/setup) page.
 </Callout>
 
-## Docker Compose (full stack)
+## Docker Compose
 
 Build and start all services with a single command:
 
