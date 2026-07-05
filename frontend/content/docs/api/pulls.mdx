@@ -8,7 +8,7 @@ Manage GitHub pull requests directly through DevBrain.
 ## Create a PR
 
 ```http
-POST /api/pulls
+POST /pulls
 ```
 
 ```json
@@ -25,23 +25,25 @@ POST /api/pulls
 ## List PRs
 
 ```http
-GET /api/pulls?repo=owner/repo-name&state=open
+GET /pulls?repo=owner/repo-name&state=open
 ```
 
 ### Filters
 
-| Parameter | Description |
-|-----------|-------------|
-| `state` | `open`, `closed`, or `all` |
-| `head` | Filter by head branch |
-| `base` | Filter by base branch (e.g. `main`) |
-| `sort` | `created`, `updated`, `popularity`, `long-running` |
-| `direction` | `asc` or `desc` |
+<TypeTable
+  type={{
+    state: { type: "'open' | 'closed' | 'all'", description: "Filter by PR state" },
+    head: { type: "string", description: "Filter by head branch" },
+    base: { type: "string", description: "Filter by base branch (e.g. `main`)" },
+    sort: { type: "'created' | 'updated' | 'popularity' | 'long-running'", description: "Sort field" },
+    direction: { type: "'asc' | 'desc'", description: "Sort direction" },
+  }}
+/>
 
 ## Merge a PR
 
 ```http
-POST /api/pulls/{number}/merge
+POST /pulls/{number}/merge
 ```
 
 ```json
@@ -55,7 +57,7 @@ Available methods: `merge`, `squash`, `rebase`.
 ## Update / Close
 
 ```http
-PATCH /api/pulls/{number}
+PATCH /pulls/{number}
 ```
 
 ```json
@@ -64,3 +66,15 @@ PATCH /api/pulls/{number}
   "state": "closed"
 }
 ```
+
+## Close / Reopen
+
+```http
+POST /pulls/{number}/close
+POST /pulls/{number}/reopen
+```
+
+<Callout type="info" title="Authentication">
+Write actions require an `X-GitHub-User-Token` header with your own GitHub PAT.
+See the [agent setup docs](../agents/claude-code) for details.
+</Callout>

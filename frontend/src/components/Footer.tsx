@@ -89,9 +89,9 @@ function SiteFooterInteractiveLogotype() {
 const agents = [
   {
     name: "Claude Code",
-    bg: "bg-white",
-    borderColor: "border-[rgba(4,2,0,0.08)]",
-    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    bg: "bg-white dark:bg-[#1c1c1e]",
+    borderColor: "border-[rgba(4,2,0,0.08)] dark:border-[rgba(255,255,255,0.12)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)] dark:hover:shadow-[0_12px_28px_rgba(255,255,255,0.06)]",
     position: "top-[6%] left-[12%] lg:left-[25%]",
     dx: -60,
     dy: -40,
@@ -101,111 +101,123 @@ const agents = [
   },
   {
     name: "Cursor",
-    bg: "bg-white",
-    borderColor: "border-[rgba(4,2,0,0.08)]",
-    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    bg: "bg-white dark:bg-[#1c1c1e]",
+    borderColor: "border-[rgba(4,2,0,0.08)] dark:border-[rgba(255,255,255,0.12)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)] dark:hover:shadow-[0_12px_28px_rgba(255,255,255,0.06)]",
     position: "top-[12%] right-[10%] lg:right-[20%]",
     dx: 60,
     dy: -30,
     logo: (
-      <img src="/cursor.png" alt="Cursor" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+      <img src="/cursor-light.png" alt="Cursor" className="block dark:hidden w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+    ),
+    logoDark: (
+      <img src="/cursor-dark.png" alt="Cursor" className="hidden dark:block w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
   {
     name: "GitHub Copilot",
-    bg: "bg-white",
-    borderColor: "border-[rgba(4,2,0,0.08)]",
-    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    bg: "bg-white dark:bg-[#1c1c1e]",
+    borderColor: "border-[rgba(4,2,0,0.08)] dark:border-[rgba(255,255,255,0.12)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)] dark:hover:shadow-[0_12px_28px_rgba(255,255,255,0.06)]",
     position: "top-[22%] left-[6%] lg:left-[16%]",
     dx: -80,
     dy: -10,
     logo: (
-      <img src="/github-copilot-removebg-preview.png" alt="GitHub Copilot" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+      <img src="/github-copilot.svg" alt="GitHub Copilot" className="block dark:hidden w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+    ),
+    logoDark: (
+      <img src="/github-copilot-dark.svg" alt="GitHub Copilot" className="hidden dark:block w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
   {
     name: "Antigravity",
-    bg: "bg-white",
-    borderColor: "border-[rgba(4,2,0,0.08)]",
-    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    bg: "bg-white dark:bg-[#1c1c1e]",
+    borderColor: "border-[rgba(4,2,0,0.08)] dark:border-[rgba(255,255,255,0.12)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)] dark:hover:shadow-[0_12px_28px_rgba(255,255,255,0.06)]",
     position: "top-[44%] left-[10%] lg:left-[22%]",
     dx: -60,
     dy: 10,
     logo: (
-      <img src="/google-antigravity.png" alt="Antigravity" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+      <img src="/antigravity-color.svg" alt="Antigravity" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
   {
     name: "Zed",
-    bg: "bg-white",
-    borderColor: "border-[rgba(4,2,0,0.08)]",
-    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    bg: "bg-white dark:bg-[#1c1c1e]",
+    borderColor: "border-[rgba(4,2,0,0.08)] dark:border-[rgba(255,255,255,0.12)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)] dark:hover:shadow-[0_12px_28px_rgba(255,255,255,0.06)]",
     position: "top-[34%] right-[6%] lg:right-[15%]",
     dx: 70,
     dy: -10,
     logo: (
-      <img src="/Zed_Editor_Logo.png" alt="Zed" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+      <img src="/zed-dark.svg" alt="Zed" className="block dark:hidden w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+    ),
+    logoDark: (
+      <img src="/zed-light.svg" alt="Zed" className="hidden dark:block w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
   {
     name: "OpenAI Codex",
-    bg: "bg-white",
-    borderColor: "border-[rgba(4,2,0,0.08)]",
-    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    bg: "bg-white dark:bg-[#1c1c1e]",
+    borderColor: "border-[rgba(4,2,0,0.08)] dark:border-[rgba(255,255,255,0.12)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)] dark:hover:shadow-[0_12px_28px_rgba(255,255,255,0.06)]",
     position: "top-[56%] right-[12%] lg:right-[22%]",
     dx: 50,
     dy: 20,
     logo: (
-      <img src="/codex-color-removebg-preview.png" alt="OpenAI Codex" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+      <img src="/codex-color.svg" alt="OpenAI Codex" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
   {
     name: "n8n",
-    bg: "bg-white",
-    borderColor: "border-[rgba(4,2,0,0.08)]",
-    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    bg: "bg-white dark:bg-[#1c1c1e]",
+    borderColor: "border-[rgba(4,2,0,0.08)] dark:border-[rgba(255,255,255,0.12)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)] dark:hover:shadow-[0_12px_28px_rgba(255,255,255,0.06)]",
     position: "top-[68%] left-[6%] lg:left-[14%]",
     dx: -70,
     dy: 40,
     logo: (
-      <img src="/n8n-icon.webp" alt="n8n" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+      <img src="/n8n.svg" alt="n8n" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
   {
     name: "OpenCode",
-    bg: "bg-white",
-    borderColor: "border-[rgba(4,2,0,0.08)]",
-    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    bg: "bg-white dark:bg-[#1c1c1e]",
+    borderColor: "border-[rgba(4,2,0,0.08)] dark:border-[rgba(255,255,255,0.12)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)] dark:hover:shadow-[0_12px_28px_rgba(255,255,255,0.06)]",
     position: "top-[80%] left-[15%] lg:left-[25%]",
     dx: -50,
     dy: 60,
     logo: (
-      <img src="/opencode-logo-removebg-preview.png" alt="OpenCode" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+      <img src="/opencode-light.svg" alt="OpenCode" className="block dark:hidden w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+    ),
+    logoDark: (
+      <img src="/opencode-dark.svg" alt="OpenCode" className="hidden dark:block w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
 
   {
-    name: "Windsurf",
-    bg: "bg-white",
-    borderColor: "border-[rgba(4,2,0,0.08)]",
-    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    name: "VS Code",
+    bg: "bg-white dark:bg-[#1c1c1e]",
+    borderColor: "border-[rgba(4,2,0,0.08)] dark:border-[rgba(255,255,255,0.12)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)] dark:hover:shadow-[0_12px_28px_rgba(255,255,255,0.06)]",
     position: "top-[74%] right-[8%] lg:right-[16%]",
     dx: 70,
     dy: 40,
     logo: (
-      <img src="/images-removebg-preview.png" alt="Windsurf" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+      <img src="/vscode.svg" alt="VS Code" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   },
   {
-    name: "Aider",
-    bg: "bg-white",
-    borderColor: "border-[rgba(4,2,0,0.08)]",
-    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)]",
+    name: "OpenClaw",
+    bg: "bg-white dark:bg-[#1c1c1e]",
+    borderColor: "border-[rgba(4,2,0,0.08)] dark:border-[rgba(255,255,255,0.12)]",
+    shadowColor: "hover:shadow-[0_12px_28px_rgba(4,2,0,0.08)] dark:hover:shadow-[0_12px_28px_rgba(255,255,255,0.06)]",
     position: "top-[72%] right-[24%] lg:right-[32%]",
     dx: 50,
     dy: 60,
     logo: (
-      <img src="/images12-removebg-preview.png" alt="Aider" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
+      <img src="/openclaw-dark.svg" alt="OpenClaw" className="w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 object-contain select-none" />
     )
   }
 ];
@@ -221,7 +233,14 @@ function AgentIcon({ agent, progress }: { agent: typeof agents[0]; progress: any
       className={`absolute pointer-events-auto ${agent.position} w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-[14px] sm:rounded-[18px] lg:rounded-[24px] ${agent.bg} border border-border-soft flex items-center justify-center cursor-pointer transition-[box-shadow,border-color] duration-300 shadow-sm ${agent.shadowColor}`}
       title={agent.name}
     >
-      {agent.logo}
+      {agent.logoDark ? (
+        <>
+          <span className="block dark:hidden">{agent.logo}</span>
+          <span className="hidden dark:block">{agent.logoDark}</span>
+        </>
+      ) : (
+        agent.logo
+      )}
     </motion.div>
   );
 }
@@ -303,7 +322,7 @@ export function Footer() {
           Deploy with Docker
         </button>
 
-        <div className="mt-8 bg-bg-card border-[1.5px] border-[rgba(4,2,0,0.12)] rounded-[16px] px-[32px] py-[20px] inline-flex items-center gap-4 hover:border-[rgba(4,2,0,0.24)] transition-colors group">
+        <div className="mt-8 bg-bg-card border-[1.5px] border-[rgba(4,2,0,0.12)] dark:border-[rgba(255,255,255,0.12)] rounded-[16px] px-[32px] py-[20px] inline-flex items-center gap-4 hover:border-[rgba(4,2,0,0.24)] dark:hover:border-[rgba(255,255,255,0.24)] transition-colors group">
           <span className="font-code text-[15px] text-text-primary">docker-compose up</span>
           <button 
             onClick={handleCopy} 
@@ -354,7 +373,7 @@ export function Footer() {
       <SiteFooterInteractiveLogotype />
 
       {/* Footer Bar */}
-      <div className="w-full border-t border-[rgba(4,2,0,0.1)] px-[24px] md:px-[48px] py-[24px] flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="w-full border-t border-[rgba(4,2,0,0.1)] dark:border-[rgba(255,255,255,0.1)] px-[24px] md:px-[48px] py-[24px] flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center justify-center md:justify-start gap-3 flex-1">
           <div className="inline-flex items-center gap-1.5 bg-accent-mint/20 border border-accent-mint/30 px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono text-text-primary leading-none">
             Open Source

@@ -1,0 +1,129 @@
+---
+title: Generic MCP Config
+description: Generic MCP configuration template that works with any MCP-compatible client.
+---
+
+If your MCP client isn't listed elsewhere, use this generic configuration. Most MCP clients accept a JSON or TOML config with a command, arguments, and environment variables.
+
+## JSON Template
+
+```json tab="Docker"
+{
+  "mcpServers": {
+    "devbrain": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "DEVBRAIN_API_URL=http://host.docker.internal:8000",
+        "devbrain",
+        "python", "-m", "backend.mcp_server"
+      ]
+    }
+  }
+}
+```
+
+```json tab="Python"
+{
+  "mcpServers": {
+    "devbrain": {
+      "command": "python",
+      "args": ["-m", "backend.mcp_server"],
+      "env": {
+        "DEVBRAIN_API_URL": "http://localhost:8000"
+      }
+    }
+  }
+}
+```
+
+## TOML Template
+
+Some clients (like Codex CLI) use TOML instead of JSON:
+
+```toml tab="Docker"
+[mcp_servers.devbrain]
+command = "docker"
+args = ["run", "-i", "--rm", "-e", "DEVBRAIN_API_URL=http://host.docker.internal:8000", "devbrain", "python", "-m", "backend.mcp_server"]
+```
+
+```toml tab="Python"
+[mcp_servers.devbrain]
+command = "python"
+args = ["-m", "backend.mcp_server"]
+
+[mcp_servers.devbrain.env]
+DEVBRAIN_API_URL = "http://localhost:8000"
+```
+
+## Visual Studio Code (generic)
+
+For any VS Code extension that supports MCP (AI Assistant, Continue.dev, Cline, etc.), add to your VS Code `settings.json`:
+
+```json tab="Docker"
+{
+  "mcp": {
+    "servers": {
+      "devbrain": {
+        "command": "docker",
+        "args": [
+          "run", "-i", "--rm",
+          "-e", "DEVBRAIN_API_URL=http://host.docker.internal:8000",
+          "devbrain",
+          "python", "-m", "backend.mcp_server"
+        ]
+      }
+    }
+  }
+}
+```
+
+```json tab="Python"
+{
+  "mcp": {
+    "servers": {
+      "devbrain": {
+        "command": "python",
+        "args": ["-m", "backend.mcp_server"],
+        "env": {
+          "DEVBRAIN_API_URL": "http://localhost:8000"
+        }
+      }
+    }
+  }
+}
+```
+
+## MCP Proxy / Gateway
+
+If you use an MCP proxy or gateway to share one server across multiple agents, point it at the DevBrain MCP server:
+
+```json
+{
+  "mcpServers": {
+    "devbrain": {
+      "command": "python",
+      "args": ["-m", "backend.mcp_server"],
+      "env": {
+        "DEVBRAIN_API_URL": "http://localhost:8000"
+      }
+    }
+  }
+}
+```
+
+## Base Command Reference
+
+The underlying MCP server command is always the same regardless of client:
+
+| Component | Value |
+|-----------|-------|
+| **Command** | `python -m backend.mcp_server` (or `docker run -i --rm devbrain python -m backend.mcp_server`) |
+| **Required env** | `DEVBRAIN_API_URL` pointing to your hosted backend |
+| **Optional env** | `GITHUB_USER_TOKEN` for attributed write actions |
+| **Transport** | MCP stdio |
+| **Timeout** | 120000ms recommended |
+
+<Callout type="tip" title="Write Actions">
+Add `GITHUB_USER_TOKEN` to the `env` block for attributed write actions (creating issues, commenting, etc.).
+</Callout>

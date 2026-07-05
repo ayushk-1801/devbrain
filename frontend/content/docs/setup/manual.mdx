@@ -1,0 +1,62 @@
+---
+title: Manual Setup
+description: Run DevBrain locally without Docker.
+---
+
+<Steps>
+  <Step>
+
+### Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+  </Step>
+  <Step>
+
+### Start Redis
+
+Make sure Redis is running on `localhost:6379`.
+
+```bash
+# macOS
+brew services start redis
+
+# Linux
+sudo systemctl start redis
+
+# Docker (standalone)
+docker run -d -p 6379:6379 redis:7-alpine
+```
+
+  </Step>
+  <Step>
+
+### Run the API
+
+```bash
+uvicorn backend.main:app --reload --port 8000
+```
+
+  </Step>
+  <Step>
+
+### Run the Worker
+
+```bash
+python -m arq backend.worker.WorkerSettings
+```
+
+  </Step>
+</Steps>
+
+<Callout type="warning">
+Both the API and worker processes **must** run concurrently in separate
+terminals. The API enqueues jobs to Redis; the worker picks them up and runs
+Cognee ingestion.
+</Callout>
+
+<Callout type="info" title="Cognee Mode">
+DevBrain uses **Cognee Cloud** by default - set `COGNEE_API_KEY` and `COGNEE_BASE_URL` in your `.env` before starting the processes. Leave `COGNEE_API_KEY` blank to fall back to **local mode** (Kuzu + LanceDB + SQLite with Gemini).
+</Callout>

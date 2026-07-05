@@ -20,10 +20,12 @@ Initiates a complete sync of a repository's history - commits, PRs, AST, ADRs, r
 }
 ```
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `repo` | string | yes | Repository to ingest |
-| `sync_history_days` | integer | no | How far back to sync (omit for all) |
+<TypeTable
+  type={{
+    repo: { type: "string", description: "Repository to ingest (required)" },
+    sync_history_days: { type: "integer", description: "How far back to sync in days. Omit for all history." },
+  }}
+/>
 
 ### Response
 
@@ -63,4 +65,8 @@ Receives GitHub push and pull_request events for incremental ingestion. Includes
 DELETE /module/{repo}/{module}
 ```
 
-Surgically removes a deprecated module's subgraph from the knowledge graph. Requires an explicit module name - never call without a specific target.
+<Callout type="warning" title="Danger">
+Never call `forget` without a specific module name - it will delete the entire dataset. This operation is destructive and irreversible.
+</Callout>
+
+Surgically removes a deprecated module's subgraph from the knowledge graph.

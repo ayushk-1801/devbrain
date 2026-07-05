@@ -1,0 +1,78 @@
+---
+title: GitHub Copilot
+description: Connect GitHub Copilot to DevBrain via MCP.
+---
+
+[GitHub Copilot](https://github.com/features/copilot) supports MCP servers in both the VS Code extension and the Copilot CLI.
+
+## Copilot in VS Code
+
+Add to your project's `.vscode/mcp.json` or VS Code user settings:
+
+```json tab="Docker"
+{
+  "servers": {
+    "devbrain": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "DEVBRAIN_API_URL=http://host.docker.internal:8000",
+        "devbrain",
+        "python", "-m", "backend.mcp_server"
+      ]
+    }
+  }
+}
+```
+
+```json tab="Python"
+{
+  "servers": {
+    "devbrain": {
+      "command": "python",
+      "args": ["-m", "backend.mcp_server"],
+      "env": {
+        "DEVBRAIN_API_URL": "http://localhost:8000"
+      }
+    }
+  }
+}
+```
+
+## Copilot CLI
+
+Edit `~/.copilot/mcp-config.json`:
+
+```json tab="Docker"
+{
+  "mcpServers": {
+    "devbrain": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "DEVBRAIN_API_URL=http://host.docker.internal:8000",
+        "devbrain",
+        "python", "-m", "backend.mcp_server"
+      ]
+    }
+  }
+}
+```
+
+```json tab="Python"
+{
+  "mcpServers": {
+    "devbrain": {
+      "command": "python",
+      "args": ["-m", "backend.mcp_server"],
+      "env": {
+        "DEVBRAIN_API_URL": "http://localhost:8000"
+      }
+    }
+  }
+}
+```
+
+<Callout type="tip" title="Write Actions">
+Add `GITHUB_USER_TOKEN` to the `env` block for attributed write actions (creating issues, commenting, etc.).
+</Callout>

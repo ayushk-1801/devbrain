@@ -3,8 +3,6 @@ title: Docker Setup
 description: Deploy DevBrain using Docker Compose.
 ---
 
-# Docker Setup (Recommended)
-
 Build and start all services with a single command:
 
 ```bash
@@ -18,9 +16,14 @@ docker-compose up --build
 | `redis` | internal | Job queue + changelog/profile state |
 | `devbrain-api` | 8000 | FastAPI REST API + webhook receiver |
 | `devbrain-worker` | - | ARQ worker - runs Cognee ingestion |
-| `devbrain-mcp` | - | MCP server for Claude Code / Cursor |
+| `devbrain-mcp` | - | MCP server for Claude Code / Cursor (requires `--profile mcp`) |
+| `devbrain-platform` | 9000 | Platform service for auth + instance provisioning (requires `--profile platform`) |
 
-All Redis state and Cognee Cloud data persist across restarts via Docker volumes.
+All Redis state and Cognee data persist across restarts via Docker volumes.
+
+<Callout type="info" title="Cognee Mode">
+DevBrain uses **Cognee Cloud** by default - set `COGNEE_API_KEY` and `COGNEE_BASE_URL` in your `.env`. Leave `COGNEE_API_KEY` blank to fall back to **local mode** (Kuzu + LanceDB + SQLite with Gemini). The backend auto-detects the mode.
+</Callout>
 
 ## First Ingestion
 

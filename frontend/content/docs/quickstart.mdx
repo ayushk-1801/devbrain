@@ -5,30 +5,58 @@ description: Get DevBrain up and running in under 5 minutes.
 
 Get DevBrain running and querying your codebase's history in minutes.
 
-## 1. Configure Environment
+<Steps>
+  <Step>
+
+### Configure Environment
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` with your secrets:
+Edit `.env` with your secrets. Choose the tab that matches your deployment mode:
 
-```bash
-OPENAI_API_KEY=sk-...           # OpenAI / LLM provider key
+```bash tab="Cognee Cloud"
+# Cognee Cloud - hosted stores, no local vector/graph infra needed
+COGNEE_BASE_URL=https://your-instance.cognee.ai
+COGNEE_API_KEY=your_cognee_api_key
+
+# GitHub access (both modes)
 GITHUB_TOKEN=ghp_...            # GitHub PAT with repo access
 GITHUB_REPO=owner/your-repo     # Default repo to ingest
 GITHUB_WEBHOOK_SECRET=...       # Webhook signature secret
 ```
 
-## 2. Start Services
+```bash tab="Local Mode"
+# Local mode - file-based Kuzu + LanceDB + SQLite, LLM via Gemini
+GEMINI_API_KEY=...              # Get one at aistudio.google.com/apikey
 
-```bash
-docker-compose up --build
+# GitHub access (both modes)
+GITHUB_TOKEN=ghp_...            # GitHub PAT with repo access
+GITHUB_REPO=owner/your-repo     # Default repo to ingest
+GITHUB_WEBHOOK_SECRET=...       # Webhook signature secret
 ```
 
-This starts four services: Redis, DevBrain API (port 8000), worker, and MCP server.
+  </Step>
+  <Step>
 
-## 3. Ingest Repository History
+### Start Services
+
+```bash
+docker compose up --build
+```
+
+This starts Redis (job queue), DevBrain API (port 8000), and a background worker for ingestion.
+
+<Callout type="info">
+Add `--profile mcp` to also start the MCP server for AI agent connections
+(Claude Code, Cursor, OpenCode, etc.).
+</Callout>
+
+  </Step>
+  <Step>
+
+### Ingest Repository History
 
 ```bash
 curl -X POST "http://localhost:8000/ingest" \
@@ -36,10 +64,16 @@ curl -X POST "http://localhost:8000/ingest" \
   -d '{"repo": "owner/your-repo", "sync_history_days": 90}'
 ```
 
-## 4. Ask Questions
+  </Step>
+  <Step>
+
+### Ask Questions
 
 ```bash
 curl "http://localhost:8000/query?q=why+was+auth+refactored&repo=owner/your-repo"
 ```
 
 That's it. DevBrain is now indexing your codebase's history and decisions into a queryable knowledge graph.
+
+  </Step>
+</Steps>

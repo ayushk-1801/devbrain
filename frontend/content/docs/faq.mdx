@@ -3,34 +3,105 @@ title: FAQ
 description: Frequently asked questions about DevBrain.
 ---
 
-## How is DevBrain different from GitHub's built-in search?
+<Accordions type="single">
+  <Accordion title="How is DevBrain different from GitHub's built-in search?">
 
 GitHub search tells you *what* changed. DevBrain tells you *why* by connecting commits, PR discussions, review comments, and ADRs into a queryable knowledge graph.
 
-## Can I use DevBrain with private repositories?
+  </Accordion>
+  <Accordion title="Can I use DevBrain with private repositories?">
 
 Yes. DevBrain uses your GitHub PAT for authentication and respects repository access permissions.
 
-## What LLM providers are supported?
+  </Accordion>
+  <Accordion title="What LLM providers are supported?">
 
-DevBrain uses Cognee, which supports OpenAI, Anthropic, and any OpenAI-compatible provider. Configure via `OPENAI_API_KEY` in `.env`.
+In **Cognee Cloud mode**, the LLM is managed by Cognee Cloud - no local API key needed. In **local mode**, DevBrain uses Gemini (default) for both LLM and embeddings. Cognee also supports OpenAI, Anthropic, and any OpenAI-compatible provider - set `LLM_PROVIDER` and the corresponding API key in `.env`.
 
-## Does DevBrain require a GPU?
+  </Accordion>
+  <Accordion title="What's the difference between Cognee Cloud and local mode?">
+
+**Cognee Cloud:** set `COGNEE_API_KEY` - graph, vector, and relational stores are hosted by Cognee. No local infra beyond the ingestion server. **Local mode:** file-based Kuzu graph store, LanceDB vector store, and SQLite with Gemini API for LLM/embeddings. All features work identically in both modes.
+
+  </Accordion>
+  <Accordion title="Does DevBrain require a GPU?">
 
 No. All LLM calls are made via API - no local GPU is required.
 
-## How much does Cognee Cloud cost?
-
-Use code `COGNEE-35` at [cognee.ai](https://cognee.ai) for a free Developer plan ($35 value). Local setups with Kuzu + LanceDB are completely free.
-
-## What languages does AST analysis support?
+  </Accordion>
+  <Accordion title="What languages does AST analysis support?">
 
 Python, JavaScript, TypeScript, Go, Rust, Java, C#, PHP, and Ruby via `cognee[codegraph]`.
 
-## Can I run DevBrain without Docker?
+  </Accordion>
+  <Accordion title="Can I run DevBrain without Docker?">
 
-Yes. See the [Local Setup](../setup/local) guide. You'll need Python 3.11+ and Redis.
+Yes. See the [Manual Setup](../setup/manual) guide. You'll need Python 3.11+ and Redis.
 
-## How often does memory improve itself?
+  </Accordion>
+  <Accordion title="How often does memory improve itself?">
 
 The `cognee.improve()` job runs weekly via cron, pruning stale nodes and strengthening frequently-queried paths.
+
+  </Accordion>
+  <Accordion title="What data sources does DevBrain ingest?">
+
+Commits, pull requests (including reviews and discussions), issues, Architecture Decision Records (ADRs), codebase AST (functions, classes, imports), and releases/tags/deployments.
+
+  </Accordion>
+  <Accordion title="How do I query DevBrain?">
+
+Use `GET /query?q=your+question&repo=owner/repo` or the `ask_devbrain()` / `recall()` functions in `backend/memory/query.py`. Natural language questions are supported.
+
+  </Accordion>
+  <Accordion title="What is Cognee and why does DevBrain use it?">
+
+Cognee is a hybrid graph-vector memory engine. DevBrain uses it for all four core APIs: `remember()` (ingestion), `recall()` (query), `improve()` (self-improvement), and `forget()` (pruning). It powers the 6-stage ECL pipeline that structures engineering knowledge into a queryable graph.
+
+  </Accordion>
+  <Accordion title="How do I set up a GitHub webhook?">
+
+Configure a webhook in your repo settings pointing to `https://your-domain/webhook/github` with content type `application/json`, events `push` and `pull_request`, and the same secret as `GITHUB_WEBHOOK_SECRET` in your `.env`. Use ngrok or Cloudflare Tunnel for local development.
+
+  </Accordion>
+  <Accordion title="What is the changelog feature?">
+
+DevBrain generates personalized digests for each contributor, showing relevant commits, PRs, and @mentions since their last visit. Data is stored in Redis for instant access - no GitHub API calls during digest generation.
+
+  </Accordion>
+  <Accordion title="Can I use DevBrain with Claude Code or Cursor?">
+
+Yes. Both are supported via DevBrain's MCP server. Start the API with `--profile mcp` enabled, then configure your agent to connect to the MCP endpoint. See the [Agents](../agents) section for detailed setup guides.
+
+  </Accordion>
+  <Accordion title="How does the memory graph work?">
+
+DevBrain builds a knowledge graph with nodes for Commits, PRs, Issues, ADRs, Files, Functions, Classes, and Developers. Edges represent relationships like `COMMIT → MODIFIED → File`, `PR → APPROVED_BY → Developer`, and `Function → CALLS → Function`. This enables multi-hop traversal queries like "which modules depend on PaymentGateway and were they updated post-refactor?"
+
+  </Accordion>
+  <Accordion title="What Redis keys does DevBrain use?">
+
+Changelog sync timestamps, user subscriptions, webhook URLs, per-user profiles (files committed, PRs reviewed, @mentions, file touches), and the job queue. All keys are prefixed with `devbrain:` for easy namespace management.
+
+  </Accordion>
+  <Accordion title="How do I subscribe to user digests?">
+
+`POST /changelog/subscribe` with JSON `{"repo": "owner/repo", "username": "alice", "notify_webhook": "https://..."}`. Then `POST /changelog/generate?repo=owner/repo&notify=true` to generate and optionally push digests to subscribers.
+
+  </Accordion>
+  <Accordion title="What's the difference between recall modes?">
+
+`HYBRID` (default) - routes between semantic vector similarity and graph traversal. `GRAPH_COMPLETION` - best for "why" questions requiring multi-hop reasoning. `CHUNKS` - returns raw matching text from PRs and commits.
+
+  </Accordion>
+  <Accordion title="How do I prune a deprecated module?">
+
+`DELETE /module/{repo}/{module}` calls `cognee.forget()` with a specific `filter_by` to surgically remove only that module's subgraph. Never call `forget()` without a filter - it will delete the entire dataset.
+
+  </Accordion>
+  <Accordion title="What dataset naming convention does DevBrain use?">
+
+`repo_{owner}_{repo}_{type}` where type is one of `commits`, `decisions`, `adrs`, `ast`, or `profiles`. Consistency is critical for cross-source multi-hop traversal.
+
+  </Accordion>
+</Accordions>

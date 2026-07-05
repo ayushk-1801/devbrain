@@ -1,15 +1,28 @@
+import { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { source } from '@/lib/source';
 import { DocsLayout } from 'fumadocs-ui/layouts/docs';
 import { DocsBody, DocsPage as FumadocsPage } from 'fumadocs-ui/layouts/docs/page';
 import { RootProvider } from 'fumadocs-ui/provider/react-router';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
+import { Accordion, Accordions } from 'fumadocs-ui/components/accordion';
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+import { Card, Cards } from 'fumadocs-ui/components/card';
+import { TypeTable } from 'fumadocs-ui/components/type-table';
 import { Logo } from './ui/Logo';
 
 const Provider = RootProvider as any;
 const PageLayout = FumadocsPage as any;
 
 export default function DocsPage() {
+  useEffect(() => {
+    document.title = "DevBrain - Docs";
+    return () => {
+      document.title = "DevBrain";
+    };
+  }, []);
+
   const params = useParams();
   const slugParam = params['*'] || '';
   const slugs = slugParam.split('/').filter(Boolean);
@@ -57,6 +70,14 @@ export default function DocsPage() {
   // Let's customize components so links use React Router's Link instead of native anchor tags
   const mdxComponents = {
     ...defaultMdxComponents,
+    Accordion,
+    Accordions,
+    Callout,
+    Step,
+    Steps,
+    Card,
+    Cards,
+    TypeTable,
     a: ({ href, children, ...props }: any) => {
       const isInternal = href && (href.startsWith('/') || href.startsWith('.'));
       if (isInternal) {

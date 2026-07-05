@@ -30,17 +30,21 @@ graph TD
 
 ## Three-Store Architecture
 
-| Store | Technology | Purpose |
-|-------|-----------|---------|
-| Graph | Kuzu / Neo4j | AST nodes, call graphs, PR/commit connections |
-| Vector | LanceDB | Semantic search and fuzzy concept matching |
-| Relational | SQLite | System state and mappings |
+<TypeTable
+  type={{
+    Graph: { type: "Kuzu / Neo4j", description: "AST nodes, call graphs, PR/commit connections" },
+    Vector: { type: "LanceDB", description: "Semantic search and fuzzy concept matching" },
+    Relational: { type: "SQLite", description: "System state and mappings" },
+  }}
+/>
 
 ## Services
 
-| Service | Role |
-|---------|------|
-| FastAPI | REST API + webhook receiver |
-| ARQ Worker | Background Cognee ingestion jobs |
-| Redis | Job queue + changelog/profile state |
-| Cognee MCP | Agent interface (Claude Code, Cursor) |
+<TypeTable
+  type={{
+    FastAPI: { type: "Service", description: "REST API + webhook receiver" },
+    "ARQ Worker": { type: "Service", description: "Background Cognee ingestion jobs" },
+    Redis: { type: "Service", description: "Job queue + changelog/profile state" },
+    "Cognee MCP": { type: "Service", description: "Agent interface for Claude Code, Cursor" },
+  }}
+/>
