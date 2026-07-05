@@ -375,9 +375,10 @@ export function Footer() {
       {/* Footer Bar */}
       <div className="w-full border-t border-[rgba(4,2,0,0.1)] dark:border-[rgba(255,255,255,0.1)] px-[24px] md:px-[48px] py-[24px] flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center justify-center md:justify-start gap-3 flex-1">
-          <div className="inline-flex items-center gap-1.5 bg-accent-mint/20 border border-accent-mint/30 px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono text-text-primary leading-none">
-            Open Source
-            <span className="text-text-muted font-normal normal-case">MIT</span>
+          <div className="flex items-center justify-center md:justify-start gap-1.5 flex-1 text-[13px] text-text-muted font-display">
+            <span>Open Source</span>
+            <span className="text-text-inactive">·</span>
+            <span>MIT License</span>
           </div>
         </div>
         <span className="text-[13px] text-text-muted">

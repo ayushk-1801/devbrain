@@ -68,10 +68,12 @@ export function UseCases() {
               onClick={() => setActiveTab(tab.id)}
               className={`font-display text-[14px] px-[24px] py-[10px] rounded-full border-[1.5px] transition-colors cursor-pointer ${
                 isActive 
-                  ? 'border-border text-[#040200] font-bold ' + (
-                      tab.id === 'onboarding' ? 'bg-accent-mint'
-                        : tab.id === 'review' ? 'bg-accent-powder'
-                        : 'bg-accent-blush'
+                  ? 'font-bold border-border text-[#040200] ' + (
+                      tab.id === 'onboarding' 
+                        ? 'bg-accent-mint dark:bg-bg-secondary dark:text-accent-mint dark:border-accent-mint/30'
+                        : tab.id === 'review' 
+                          ? 'bg-accent-powder dark:bg-bg-secondary dark:text-accent-powder dark:border-accent-powder/30'
+                          : 'bg-accent-blush dark:bg-bg-secondary dark:text-accent-blush dark:border-accent-blush/30'
                     )
                   : 'border-text-muted bg-transparent text-text-muted hover:bg-bg-secondary'
               }`}
@@ -98,17 +100,23 @@ export function UseCases() {
               return (
                 <div 
                   key={idx}
-                  className={`rounded-[24px] p-[40px] md:p-[48px] flex flex-col transition-all duration-300 border border-border/10 ${
-                    activeTab === 'onboarding' ? 'bg-accent-mint'
-                      : activeTab === 'review' ? 'bg-accent-powder'
-                      : 'bg-accent-blush'
+                  className={`rounded-[24px] p-[40px] md:p-[48px] flex flex-col transition-all duration-300 border ${
+                    activeTab === 'onboarding' 
+                      ? 'bg-accent-mint border-border/10 dark:bg-bg-secondary dark:border-accent-mint/20'
+                      : activeTab === 'review' 
+                        ? 'bg-accent-powder border-border/10 dark:bg-bg-secondary dark:border-accent-powder/20'
+                        : 'bg-accent-blush border-border/10 dark:bg-bg-secondary dark:border-accent-blush/20'
                   }`}
                 >
-                  <Icon size={32} className="text-[#040200] mb-6" />
-                  <h3 className="font-display text-[20px] md:text-[22px] font-bold text-[#040200] mb-3 leading-tight tracking-tight">
+                  <Icon size={32} className={`mb-6 ${
+                    activeTab === 'onboarding' ? 'text-[#040200] dark:text-accent-mint'
+                      : activeTab === 'review' ? 'text-[#040200] dark:text-accent-powder'
+                      : 'text-[#040200] dark:text-accent-blush'
+                  }`} />
+                  <h3 className="font-display text-[20px] md:text-[22px] font-bold text-[#040200] dark:text-text-primary mb-3 leading-tight tracking-tight">
                     {card.title}
                   </h3>
-                  <p className="font-display text-[15px] md:text-[16px] text-[#6B6A5E] leading-[1.6]">
+                  <p className="font-display text-[15px] md:text-[16px] text-[#6B6A5E] dark:text-text-muted leading-[1.6]">
                     {card.body}
                   </p>
                 </div>

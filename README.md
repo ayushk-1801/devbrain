@@ -5,6 +5,8 @@ requests, issues, ADRs, and codebase structure into [Cognee](https://www.cognee.
 hybrid graph + vector memory, then answers *"why was this changed?"* questions with
 sourced provenance.
 
+Your AI woke up in Vegas with no memory of last night. DevBrain fixes that.
+
 ---
 
 ## How it works
@@ -321,3 +323,7 @@ curl -X DELETE localhost:8000/module/owner/your-repo/legacy_payment_v1
 
 Datasets follow the pattern `repo_{owner}_{repo}_{type}` where `type` is one of
 `commits`, `prs`, `issues`, `adrs`, `ast`.
+
+---
+
+[GitHub](https://github.com/ayushk-1801/devbrain) · [Live Demo](https://devbrain.example.com) · [Live Site](https://devbrain.example.com)

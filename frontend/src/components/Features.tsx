@@ -713,55 +713,158 @@ const tabContent: Record<string, {title: string, body: string, illustration: Rea
               --svg-orchid: #8250DF;
               --svg-yellow: #F7DF1E;
             }
-            .flow-dep { stroke-dasharray: 4 4; animation: flow 2s infinite linear; }
-            .pulse-app { animation: breathe 3s infinite ease-in-out; transform-origin: 50px 80px; }
-            @keyframes flow {
-              to { stroke-dashoffset: -8; }
+            .grid-pattern { opacity: 0.12; }
+            .flow-dep-curve {
+              stroke-dasharray: 6 4;
+              animation: flow-curve 1.8s infinite linear;
             }
-            @keyframes breathe {
+            .flow-dep-sub {
+              stroke-dasharray: 4 3;
+              animation: flow-curve 2.5s infinite linear;
+            }
+            .pulse-app-node {
+              animation: breathe-app 2.8s infinite ease-in-out;
+            }
+            .pulse-module-node {
+              animation: breathe-module 3.5s infinite ease-in-out;
+            }
+            @keyframes flow-curve {
+              to { stroke-dashoffset: -10; }
+            }
+            @keyframes breathe-app {
               0%, 100% { transform: scale(1); }
-              50% { transform: scale(1.05); }
+              50% { transform: scale(1.06); }
+            }
+            @keyframes breathe-module {
+              0%, 100% { transform: scale(1); }
+              50% { transform: scale(1.04); }
             }
           `}</style>
           
-          <line x1="50" y1="80" x2="110" y2="40" stroke="var(--color-border)" strokeWidth="1.5" />
-          <line x1="50" y1="80" x2="110" y2="40" stroke="var(--svg-orchid)" strokeWidth="2.5" className="flow-dep" opacity="0.75" />
+          <defs>
+            <pattern id="dot-grid" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse">
+              <circle cx="2" cy="2" r="0.6" fill="var(--color-text-muted)" opacity="0.4" />
+            </pattern>
+            <linearGradient id="orchid-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#A370F7" />
+              <stop offset="100%" stopColor="#8250DF" />
+            </linearGradient>
+            <linearGradient id="mint-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#5ED783" />
+              <stop offset="100%" stopColor="#2EA44F" />
+            </linearGradient>
+          </defs>
 
-          <line x1="50" y1="80" x2="110" y2="120" stroke="var(--color-border)" strokeWidth="1.5" />
-          <line x1="50" y1="80" x2="110" y2="120" stroke="var(--svg-orchid)" strokeWidth="2.5" className="flow-dep" opacity="0.75" />
+          {/* Grid Background */}
+          <rect width="100%" height="100%" fill="none" className="grid-pattern" style={{ fill: 'url(#dot-grid)' }} />
 
-          <line x1="110" y1="40" x2="180" y2="40" stroke="var(--color-border)" strokeWidth="1.5" />
-          <line x1="110" y1="40" x2="180" y2="40" stroke="var(--svg-mint)" strokeWidth="2.5" className="flow-dep" opacity="0.75" />
+          {/* Background connections */}
+          <path d="M 45 80 Q 75 45 115 45" stroke="var(--color-border)" strokeWidth="1.2" fill="none" opacity="0.6" />
+          <path d="M 45 80 Q 75 115 115 115" stroke="var(--color-border)" strokeWidth="1.2" fill="none" opacity="0.6" />
+          <path d="M 115 45 H 185" stroke="var(--color-border)" strokeWidth="1.2" fill="none" opacity="0.6" />
+          <path d="M 115 115 H 185" stroke="var(--color-border)" strokeWidth="1.2" fill="none" opacity="0.6" />
+          
+          {/* Subnode calling curves (AST layer) */}
+          <path d="M 115 22 Q 165 14 215 45" stroke="var(--color-border)" strokeWidth="0.8" fill="none" strokeDasharray="2 2" opacity="0.3" />
+          <path d="M 115 138 Q 165 146 215 115" stroke="var(--color-border)" strokeWidth="0.8" fill="none" strokeDasharray="2 2" opacity="0.3" />
+          
+          {/* Active Flowing connections */}
+          <path d="M 45 80 Q 75 45 115 45" stroke="var(--svg-orchid)" strokeWidth="2" fill="none" className="flow-dep-curve" opacity="0.8" strokeLinecap="round" />
+          <path d="M 45 80 Q 75 115 115 115" stroke="var(--svg-orchid)" strokeWidth="2" fill="none" className="flow-dep-curve" opacity="0.8" strokeLinecap="round" />
+          
+          <path d="M 115 45 H 185" stroke="var(--svg-mint)" strokeWidth="2" fill="none" className="flow-dep-curve" opacity="0.8" strokeLinecap="round" />
+          <path d="M 115 115 H 185" stroke="var(--svg-yellow)" strokeWidth="2" fill="none" className="flow-dep-curve" opacity="0.8" strokeLinecap="round" />
 
-          <line x1="110" y1="120" x2="180" y2="120" stroke="var(--color-border)" strokeWidth="1.5" />
-          <line x1="110" y1="120" x2="180" y2="120" stroke="var(--svg-yellow)" strokeWidth="2.5" className="flow-dep" opacity="0.75" />
+          {/* Flow on subnode calling curves */}
+          <path d="M 115 22 Q 165 14 215 45" stroke="var(--svg-mint)" strokeWidth="1.2" fill="none" className="flow-dep-sub" opacity="0.6" strokeLinecap="round" />
+          <path d="M 115 138 Q 165 146 215 115" stroke="var(--svg-yellow)" strokeWidth="1.2" fill="none" className="flow-dep-sub" opacity="0.6" strokeLinecap="round" />
 
-          <line x1="180" y1="40" x2="180" y2="120" stroke="var(--color-border)" strokeWidth="1.5" strokeDasharray="3 3" />
-          <line x1="110" y1="40" x2="110" y2="120" stroke="var(--color-border)" strokeWidth="1.5" />
+          {/* Module vertical connections */}
+          <line x1="115" y1="45" x2="115" y2="115" stroke="var(--color-border)" strokeWidth="1" strokeDasharray="3 3" opacity="0.4" />
+          <line x1="185" y1="45" x2="185" y2="115" stroke="var(--color-border)" strokeWidth="1" strokeDasharray="3 3" opacity="0.4" />
 
-          <g transform="translate(50, 80)" className="pulse-app">
-            <circle cx="0" cy="0" r="16" fill="var(--svg-orchid)" stroke="var(--color-border)" strokeWidth="2.5" />
-            <text x="0" y="3" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#FEFEF3" fontFamily="var(--font-mono)">App</text>
+          {/* AST call connectors (vertical lines to parent modules) */}
+          <line x1="115" y1="45" x2="115" y2="22" stroke="var(--color-border)" strokeWidth="0.8" strokeDasharray="2 2" opacity="0.5" />
+          <line x1="115" y1="115" x2="115" y2="138" stroke="var(--color-border)" strokeWidth="0.8" strokeDasharray="2 2" opacity="0.5" />
+          <line x1="185" y1="45" x2="215" y2="45" stroke="var(--color-border)" strokeWidth="0.8" strokeDasharray="2 2" opacity="0.5" />
+          <line x1="185" y1="115" x2="215" y2="115" stroke="var(--color-border)" strokeWidth="0.8" strokeDasharray="2 2" opacity="0.5" />
+
+          {/* AST function/class sub-nodes */}
+          {/* handler() node */}
+          <g transform="translate(115, 22)">
+            <circle cx="0" cy="0" r="3.5" fill="var(--svg-mint)" stroke="var(--color-bg)" strokeWidth="1" />
+            <text x="0" y="-8" textAnchor="middle" fontSize="6.5" fill="var(--color-text-muted)" fontFamily="var(--font-mono)">handler()</text>
           </g>
 
-          <g transform="translate(110, 40)">
-            <circle cx="0" cy="0" r="14" fill="var(--color-bg)" stroke="var(--svg-orchid)" strokeWidth="2" />
-            <text x="0" y="3" textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="var(--color-text-primary)" fontFamily="var(--font-mono)">Router</text>
+          {/* reducer() node */}
+          <g transform="translate(115, 138)">
+            <circle cx="0" cy="0" r="3.5" fill="var(--svg-yellow)" stroke="var(--color-bg)" strokeWidth="1" />
+            <text x="0" y="14" textAnchor="middle" fontSize="6.5" fill="var(--color-text-muted)" fontFamily="var(--font-mono)">reducer()</text>
           </g>
 
-          <g transform="translate(110, 120)">
-            <circle cx="0" cy="0" r="14" fill="var(--color-bg)" stroke="var(--svg-orchid)" strokeWidth="2" />
-            <text x="0" y="3" textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="var(--color-text-primary)" fontFamily="var(--font-mono)">Store</text>
+          {/* verify() node */}
+          <g transform="translate(215, 45)">
+            <circle cx="0" cy="0" r="3.5" fill="var(--svg-mint)" stroke="var(--color-bg)" strokeWidth="1" />
+            <text x="0" y="-8" textAnchor="middle" fontSize="6.5" fill="var(--color-text-muted)" fontFamily="var(--font-mono)">verify()</text>
           </g>
 
-          <g transform="translate(180, 40)">
-            <circle cx="0" cy="0" r="12" fill="var(--color-bg)" stroke="var(--svg-mint)" strokeWidth="1.8" />
-            <text x="0" y="3" textAnchor="middle" fontSize="7" fill="var(--color-text-muted)" fontFamily="var(--font-mono)">Auth</text>
+          {/* query() node */}
+          <g transform="translate(215, 115)">
+            <circle cx="0" cy="0" r="3.5" fill="var(--svg-yellow)" stroke="var(--color-bg)" strokeWidth="1" />
+            <text x="0" y="14" textAnchor="middle" fontSize="6.5" fill="var(--color-text-muted)" fontFamily="var(--font-mono)">query()</text>
           </g>
 
-          <g transform="translate(180, 120)">
-            <circle cx="0" cy="0" r="12" fill="var(--color-bg)" stroke="var(--svg-yellow)" strokeWidth="1.8" />
-            <text x="0" y="3" textAnchor="middle" fontSize="7" fill="var(--color-text-muted)" fontFamily="var(--font-mono)">Db</text>
+          {/* Main Nodes */}
+          {/* App (Central Node) */}
+          <g transform="translate(45, 80)">
+            <g className="pulse-app-node">
+              {/* Outer rotating dashed ring */}
+              <circle cx="0" cy="0" r="20" fill="none" stroke="var(--svg-orchid)" strokeWidth="1" strokeDasharray="3 3" opacity="0.6">
+                <animateTransform
+                  attributeName="transform"
+                  type="rotate"
+                  from="0 0 0"
+                  to="360 0 0"
+                  dur="12s"
+                  repeatCount="indefinite"
+                />
+              </circle>
+              {/* Main circle */}
+              <circle cx="0" cy="0" r="15" fill="url(#orchid-grad)" stroke="var(--color-border)" strokeWidth="2" />
+              <text x="0" y="3" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#FEFEF3" fontFamily="var(--font-mono)">App</text>
+            </g>
+          </g>
+
+          {/* Router Node */}
+          <g transform="translate(115, 45)">
+            <g className="pulse-module-node">
+              <circle cx="0" cy="0" r="13" fill="var(--color-bg)" stroke="var(--svg-orchid)" strokeWidth="2.2" />
+              <text x="0" y="3" textAnchor="middle" fontSize="7" fontWeight="bold" fill="var(--color-text-primary)" fontFamily="var(--font-mono)">Router</text>
+            </g>
+          </g>
+
+          {/* Store Node */}
+          <g transform="translate(115, 115)">
+            <g className="pulse-module-node">
+              <circle cx="0" cy="0" r="13" fill="var(--color-bg)" stroke="var(--svg-orchid)" strokeWidth="2.2" />
+              <text x="0" y="3" textAnchor="middle" fontSize="7" fontWeight="bold" fill="var(--color-text-primary)" fontFamily="var(--font-mono)">Store</text>
+            </g>
+          </g>
+
+          {/* Auth Node */}
+          <g transform="translate(185, 45)">
+            <g className="pulse-module-node">
+              <circle cx="0" cy="0" r="12" fill="var(--color-bg)" stroke="var(--svg-mint)" strokeWidth="2" />
+              <text x="0" y="3.2" textAnchor="middle" fontSize="6.5" fontWeight="bold" fill="var(--color-text-primary)" fontFamily="var(--font-mono)">Auth</text>
+            </g>
+          </g>
+
+          {/* Db Node */}
+          <g transform="translate(185, 115)">
+            <g className="pulse-module-node">
+              <circle cx="0" cy="0" r="12" fill="var(--color-bg)" stroke="var(--svg-yellow)" strokeWidth="2" />
+              <text x="0" y="3.2" textAnchor="middle" fontSize="6.5" fontWeight="bold" fill="var(--color-text-primary)" fontFamily="var(--font-mono)">Db</text>
+            </g>
           </g>
         </svg>
       )
@@ -811,7 +914,7 @@ const tabContent: Record<string, {title: string, body: string, illustration: Rea
           </g>
 
           <g transform="translate(160, 120)">
-            <circle cx="0" cy="0" r="14" fill="var(--color-bg)" stroke="var(--color-border)" strokeWidth="1.5" opacity="0.4" />
+            <circle cx="0" cy="0" r="14" fill="var(--color-bg)" stroke="var(--color-border)" strokeWidth="1.5" strokeOpacity="0.4" />
             <text x="0" y="3" textAnchor="middle" fontSize="7" fill="var(--color-text-inactive)" fontFamily="var(--font-mono)">db.ts</text>
           </g>
         </svg>
@@ -984,10 +1087,10 @@ const tabContent: Record<string, {title: string, body: string, illustration: Rea
           <rect x="155" y="22" width="55" height="14" rx="4" fill="none" stroke="var(--svg-mint)" strokeWidth="1.2" className="token-pulse" />
           <text x="182" y="32" textAnchor="middle" fontSize="6" fontWeight="bold" fill="var(--svg-mint)">your token</text>
           <rect x="25" y="55" width="190" height="80" rx="4" fill="var(--color-bg)" stroke="var(--color-border)" strokeWidth="1" />
-          <rect x="35" y="65" width="70" height="14" rx="2" fill="var(--color-bg-card)" stroke="var(--color-border)" strokeWidth="1" />
+          <rect x="35" y="65" width="120" height="14" rx="2" fill="var(--color-bg-card)" stroke="var(--color-border)" strokeWidth="1" />
           <text x="40" y="75" fontSize="7" fontWeight="bold" fill="var(--color-text-primary)">Title:</text>
           <text x="74" y="75" fontSize="7" fill="var(--color-text-muted)">Fix login timeout</text>
-          <rect x="35" y="85" width="100" height="14" rx="2" fill="var(--color-bg-card)" stroke="var(--color-border)" strokeWidth="1" />
+          <rect x="35" y="85" width="120" height="14" rx="2" fill="var(--color-bg-card)" stroke="var(--color-border)" strokeWidth="1" />
           <text x="40" y="95" fontSize="7" fontWeight="bold" fill="var(--color-text-primary)">Labels:</text>
           <rect x="84" y="86" width="25" height="12" rx="3" fill="var(--svg-peach)" opacity="0.3" />
           <text x="96.5" y="95" textAnchor="middle" fontSize="5.5" fontWeight="bold" fill="var(--svg-peach)">bug</text>
