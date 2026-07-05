@@ -241,7 +241,7 @@ def _render_markdown(cl: GlobalChangelog) -> str:
     )
     now_str = cl.generated_at.strftime("%Y-%m-%d %H:%M UTC")
     lines: list[str] = [
-        f"# 📋 Global Changelog — `{repo}`",
+        f"# Global Changelog — `{repo}`",
         "",
         f"**Period:** {since_str} → {now_str}  ",
         f"**Total events:** {cl.total_events()}",
@@ -252,7 +252,7 @@ def _render_markdown(cl: GlobalChangelog) -> str:
 
     # --- Releases ---
     if cl.releases:
-        lines += [f"## 🚀 Releases ({len(cl.releases)})", ""]
+        lines += [f"## Releases ({len(cl.releases)})", ""]
         for r in cl.releases:
             pre = " *(pre-release)*" if r.prerelease else ""
             lines.append(
@@ -264,13 +264,12 @@ def _render_markdown(cl: GlobalChangelog) -> str:
 
     # --- Pull Requests ---
     if cl.pull_requests:
-        state_emoji = {"merged": "🔀", "open": "🟢", "closed": "🔴"}
-        lines += [f"## 🔀 Pull Requests ({len(cl.pull_requests)})", ""]
+        lines += [f"## Pull Requests ({len(cl.pull_requests)})", ""]
         for pr in cl.pull_requests:
-            emoji = state_emoji.get(pr.state, "❓")
+            state_tag = {"merged": "merged", "open": "open", "closed": "closed"}.get(pr.state, "?")
             label_str = f" `{'` `'.join(pr.labels)}`" if pr.labels else ""
             lines.append(
-                f"- {emoji} **[#{pr.number}]({pr.url})** {pr.title}  "
+                f"- **[#{pr.number}]({pr.url})** {pr.title}  "
                 f"by @{pr.author}{label_str}  "
                 f"· *{pr.state}* · {pr.created_at.strftime('%Y-%m-%d')}"
             )
@@ -278,13 +277,12 @@ def _render_markdown(cl: GlobalChangelog) -> str:
 
     # --- Issues ---
     if cl.issues:
-        lines += [f"## 🐛 Issues ({len(cl.issues)})", ""]
+        lines += [f"## Issues ({len(cl.issues)})", ""]
         for iss in cl.issues:
-            emoji = "✅" if iss.state == "closed" else "🔵"
             assignee_str = f" → @{', @'.join(iss.assignees)}" if iss.assignees else ""
             label_str = f" `{'` `'.join(iss.labels)}`" if iss.labels else ""
             lines.append(
-                f"- {emoji} **[#{iss.number}]({iss.url})** {iss.title}  "
+                f"- **[#{iss.number}]({iss.url})** {iss.title}  "
                 f"by @{iss.author}{assignee_str}{label_str}  "
                 f"· *{iss.state}* · {iss.created_at.strftime('%Y-%m-%d')}"
             )
@@ -292,7 +290,7 @@ def _render_markdown(cl: GlobalChangelog) -> str:
 
     # --- Commits ---
     if cl.commits:
-        lines += [f"## 📝 Commits ({len(cl.commits)})", ""]
+        lines += [f"## Commits ({len(cl.commits)})", ""]
         for c in cl.commits:
             lines.append(
                 f"- [`{c.short_sha}`]({c.url}) {c.message}  "

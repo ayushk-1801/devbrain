@@ -248,7 +248,7 @@ export default function InstanceCard({ instance, onDelete, onConfigClick }: Inst
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -4 }}
                         transition={{ duration: 0.12 }}
-                        className="absolute right-0 mt-1 w-max min-w-[110px] bg-bg-card border border-border-soft rounded-lg shadow-lg py-1 z-30 font-mono text-[10px]"
+                        className="absolute right-0 mt-1 w-max min-w-[110px] bg-bg-card border border-border-soft rounded-lg shadow-lg py-1 z-30 text-[10px]"
                       >
                         <button
                           onClick={() => {

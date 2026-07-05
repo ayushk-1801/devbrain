@@ -212,21 +212,12 @@ def _reviewed_prs_from_numbers(
 # Markdown renderer
 # ---------------------------------------------------------------------------
 
-_SOURCE_EMOJI = {
-    "commit_message": "📝",
-    "pr_body": "🔀",
-    "pr_review": "👁",
-    "pr_review_comment": "💬",
-    "issue_body": "🐛",
-}
-
-
 def _render_markdown(u: UserUpdates) -> str:
     since_str = u.since.strftime("%Y-%m-%d %H:%M UTC") if u.since else "the beginning"
     now_str = u.generated_at.strftime("%Y-%m-%d %H:%M UTC")
 
     lines: list[str] = [
-        f"# 👤 Your Updates — @{u.username} on `{u.repo}`",
+        f"# Your Updates — @{u.username} on `{u.repo}`",
         "",
         f"**Since:** {since_str}  ",
         f"**Generated:** {now_str}  ",
@@ -238,11 +229,10 @@ def _render_markdown(u: UserUpdates) -> str:
 
     # --- @Mentions (most actionable — show first) ---
     if u.mentions:
-        lines += [f"## 🔔 You Were Mentioned ({len(u.mentions)})", ""]
+        lines += [f"## You Were Mentioned ({len(u.mentions)})", ""]
         for m in u.mentions:
-            emoji = _SOURCE_EMOJI.get(m.source_type, "💬")
             lines.append(
-                f"- {emoji} **@{m.mentioned_by}** mentioned you in a "
+                f"- **@{m.mentioned_by}** mentioned you in a "
                 f"[{m.source_label}]({m.source_url})  "
                 f"· {m.timestamp.strftime('%Y-%m-%d')}  "
             )
@@ -251,7 +241,7 @@ def _render_markdown(u: UserUpdates) -> str:
 
     # --- User's commits ---
     if u.my_commits:
-        lines += [f"## 📝 Your Commits ({len(u.my_commits)})", ""]
+        lines += [f"## Your Commits ({len(u.my_commits)})", ""]
         for c in u.my_commits:
             lines.append(
                 f"- [`{c.short_sha}`]({c.url}) {c.message}  "
@@ -261,28 +251,25 @@ def _render_markdown(u: UserUpdates) -> str:
 
     # --- User's PRs (authored + reviewed) ---
     if u.my_prs:
-        state_emoji = {"merged": "🔀", "open": "🟢", "closed": "🔴"}
-        lines += [f"## 🔀 Your Pull Requests ({len(u.my_prs)})", ""]
+        lines += [f"## Your Pull Requests ({len(u.my_prs)})", ""]
         for pr in u.my_prs:
-            emoji = state_emoji.get(pr.state, "❓")
             lines.append(
-                f"- {emoji} **[#{pr.number}]({pr.url})** {pr.title}  "
+                f"- **[#{pr.number}]({pr.url})** {pr.title}  "
                 f"· *{pr.state}* · {pr.created_at.strftime('%Y-%m-%d')}"
             )
         lines.append("")
 
     # --- User's issues ---
     if u.my_issues:
-        lines += [f"## 🐛 Your Issues ({len(u.my_issues)})", ""]
+        lines += [f"## Your Issues ({len(u.my_issues)})", ""]
         for iss in u.my_issues:
-            emoji = "✅" if iss.state == "closed" else "🔵"
             role = (
                 "assigned"
                 if u.username.lower() in [a.lower() for a in iss.assignees]
                 else "authored"
             )
             lines.append(
-                f"- {emoji} **[#{iss.number}]({iss.url})** {iss.title}  "
+                f"- **[#{iss.number}]({iss.url})** {iss.title}  "
                 f"· *{iss.state}* · {role} · {iss.created_at.strftime('%Y-%m-%d')}"
             )
         lines.append("")
@@ -290,7 +277,7 @@ def _render_markdown(u: UserUpdates) -> str:
     # --- Files the user owns that were changed by others ---
     if u.touched_files_activity:
         lines += [
-            f"## 📂 Your Files Changed by Others ({len(u.touched_files_activity)})",
+            f"## Your Files Changed by Others ({len(u.touched_files_activity)})",
             "",
             "_Files you've previously committed to that received new changes:_",
             "",
@@ -305,7 +292,7 @@ def _render_markdown(u: UserUpdates) -> str:
 
     # --- Releases ---
     if u.releases:
-        lines += [f"## 🚀 New Releases ({len(u.releases)})", ""]
+        lines += [f"## New Releases ({len(u.releases)})", ""]
         for r in u.releases:
             lines.append(
                 f"- **[{r.tag}]({r.url})** — {r.name}  "
@@ -315,7 +302,7 @@ def _render_markdown(u: UserUpdates) -> str:
 
     if u.is_empty:
         lines += [
-            "_No new events relevant to you since the last check. You're all caught up! 🎉_",
+            "_No new events relevant to you since the last check. You're all caught up._",
             "",
         ]
 

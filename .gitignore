@@ -14,6 +14,7 @@ venv/
 
 # Environment secrets
 .env
+.env.local
 
 # OpenCode config (local MCP credentials)
 opencode.jsonc

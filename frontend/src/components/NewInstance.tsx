@@ -27,7 +27,8 @@ interface FormData {
   githubToken: string;
   cogneeKey: string;
   geminiKey: string;
-  llmProvider: 'cognee' | 'gemini';
+  cogneeUrl: string;
+  mode: 'cognee-cloud' | 'local';
   webhookSecret: string;
 }
 
@@ -264,8 +265,8 @@ function StepKeys({
   onBack: () => void;
   onNext: () => void;
 }) {
-  const llmKey = form.llmProvider === 'cognee' ? form.cogneeKey : form.geminiKey;
-  const canNext = form.githubToken && llmKey;
+  const llmKey = form.mode === 'cognee-cloud' ? form.cogneeKey : form.geminiKey;
+  const canNext = form.githubToken && llmKey && (form.mode !== 'cognee-cloud' || form.cogneeUrl);
 
   return (
     <div className="space-y-6">
@@ -302,37 +303,51 @@ function StepKeys({
         />
       </div>
 
-      {/* LLM Key selector */}
+      {/* Mode selector */}
       <div>
         <label className="block text-[13px] font-semibold text-text-primary mb-2 flex items-center gap-1.5">
           <Sparkles size={13} />
-          LLM Provider Key <span className="text-red-400">*</span>
+          Mode <span className="text-red-400">*</span>
         </label>
 
-        {/* Toggle tabs */}
         <div className="flex gap-2 mb-3 p-1 bg-bg-secondary border border-border-soft rounded-xl">
-          {(['cognee', 'gemini'] as const).map((provider) => (
+          {(['cognee-cloud', 'local'] as const).map((mode) => (
             <button
-              key={provider}
-              onClick={() => setForm((f) => ({ ...f, llmProvider: provider }))}
+              key={mode}
+              onClick={() => setForm((f) => ({ ...f, mode }))}
               className={`flex-1 py-2 text-[13px] font-semibold rounded-lg transition-all cursor-pointer ${
-                form.llmProvider === provider
+                form.mode === mode
                   ? 'bg-bg-card border border-border-soft text-text-primary shadow-sm'
                   : 'text-text-muted hover:text-text-primary'
               }`}
             >
-              {provider === 'cognee' ? 'Cognee' : 'Google Gemini'}
+              {mode === 'cognee-cloud' ? 'Cognee Cloud' : 'Local'}
             </button>
           ))}
         </div>
 
-        {form.llmProvider === 'cognee' ? (
-          <PasswordInput
-            id="cognee-key"
-            value={form.cogneeKey}
-            onChange={(v) => setForm((f) => ({ ...f, cogneeKey: v }))}
-            placeholder="cognee_••••••••••••••••"
-          />
+        {form.mode === 'cognee-cloud' ? (
+          <div className="space-y-3">
+            <PasswordInput
+              id="cognee-key"
+              value={form.cogneeKey}
+              onChange={(v) => setForm((f) => ({ ...f, cogneeKey: v }))}
+              placeholder="cognee_••••••••••••••••"
+            />
+            <div>
+              <label htmlFor="cognee-url" className="block text-[12px] font-medium text-text-muted mb-1.5">
+                Cognee Instance URL <span className="text-red-400">*</span>
+              </label>
+              <input
+                id="cognee-url"
+                type="url"
+                value={form.cogneeUrl}
+                onChange={(e) => setForm((f) => ({ ...f, cogneeUrl: e.target.value }))}
+                placeholder="https://your-instance.cognee.ai"
+                className="w-full bg-bg border border-border-soft rounded-xl px-4 py-3 text-[14px] text-text-primary placeholder:text-text-inactive focus:outline-none focus:border-border transition-colors font-mono"
+              />
+            </div>
+          </div>
         ) : (
           <PasswordInput
             id="gemini-key"
@@ -416,9 +431,9 @@ function StepReview({
       const body: Record<string, string> = {
         repo: form.repo,
         github_token: form.githubToken,
-        llm_provider: form.llmProvider,
-        ...(form.llmProvider === 'cognee'
-          ? { cognee_api_key: form.cogneeKey }
+        mode: form.mode,
+        ...(form.mode === 'cognee-cloud'
+          ? { cognee_api_key: form.cogneeKey, cognee_url: form.cogneeUrl }
           : { gemini_api_key: form.geminiKey }),
         ...(form.webhookSecret ? { webhook_secret: form.webhookSecret } : {}),
       };
@@ -448,8 +463,8 @@ function StepReview({
     }
   };
 
-  const llmLabel = form.llmProvider === 'cognee' ? 'Cognee' : 'Google Gemini';
-  const llmKey = form.llmProvider === 'cognee' ? form.cogneeKey : form.geminiKey;
+  const llmLabel = form.mode === 'cognee-cloud' ? 'Cognee Cloud' : 'Google Gemini';
+  const llmKey = form.mode === 'cognee-cloud' ? form.cogneeKey : form.geminiKey;
 
   return (
     <div className="space-y-6">
@@ -466,7 +481,10 @@ function StepReview({
       <div className="bg-bg-secondary border border-border-soft rounded-2xl divide-y divide-border-soft overflow-hidden">
         {[
           { label: 'Repository', value: form.repo, mono: true },
-          { label: 'LLM Provider', value: llmLabel },
+          { label: 'Mode', value: llmLabel },
+          ...(form.mode === 'cognee-cloud'
+            ? [{ label: 'Cognee Instance URL', value: form.cogneeUrl, mono: true as const }]
+            : []),
           { label: `${llmLabel} API Key`, value: maskSecret(llmKey), mono: true },
           { label: 'GitHub Token', value: maskSecret(form.githubToken), mono: true },
           {
@@ -750,7 +768,8 @@ export default function NewInstance() {
     githubToken: '',
     cogneeKey: '',
     geminiKey: '',
-    llmProvider: 'gemini',
+    cogneeUrl: '',
+    mode: 'local',
     webhookSecret: '',
   });
   const [createdInstance, setCreatedInstance] = useState<CreatedInstance | null>(null);

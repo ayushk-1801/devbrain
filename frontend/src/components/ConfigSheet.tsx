@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Copy, Check, X, ExternalLink, Info, BookOpen, Link2 } from 'lucide-react';
+import { Copy, Check, X, ExternalLink, BookOpen, Link2 } from 'lucide-react';
 import { type Instance } from './InstanceCard';
 
 interface ConfigSheetProps {
@@ -17,10 +17,11 @@ const AGENTS = [
       python: '1. Ensure Claude Code is installed globally (npm install -g @anthropic-ai/claude-code).\n2. Open your project folder in your terminal.\n3. Run the command below to register DevBrain as a local Python MCP server:',
       docker: '1. Ensure Claude Code is installed globally (npm install -g @anthropic-ai/claude-code).\n2. Make sure Docker is running on your machine.\n3. Run the command below to register DevBrain as a containerized Docker MCP server:'
     },
-    copyText: (url: string, runMode: 'python' | 'docker') => 
-      runMode === 'python'
-        ? `claude mcp add devbrain -s project -e DEVBRAIN_API_URL="${url}" -- python -m backend.mcp_server`
-        : `claude mcp add devbrain -s project -- docker run -i --rm -e DEVBRAIN_API_URL="${url}" devbrain python -m backend.mcp_server`,
+    copyText: (url: string, runMode: 'python' | 'docker') => {
+      return runMode === 'python'
+        ? `claude mcp add devbrain -s project -e DEVBRAIN_API_URL="${url}" -e GITHUB_TOKEN="ghp_your_github_token_here" -- python -m backend.mcp_server`
+        : `claude mcp add devbrain -s project -- docker run -i --rm -e DEVBRAIN_API_URL="${url}" -e GITHUB_TOKEN="ghp_your_github_token_here" devbrain python -m backend.mcp_server`;
+    },
     mode: 'shell',
   },
   {
@@ -31,10 +32,11 @@ const AGENTS = [
       python: '1. Open or create your Codex configuration file at ~/.codex/config.toml.\n2. Locate the [mcp_servers] parent section.\n3. Append the following TOML configuration block to enable DevBrain via local Python:',
       docker: '1. Make sure Docker is running on your machine.\n2. Open your Codex config at ~/.codex/config.toml.\n3. Append the following TOML block to run DevBrain containerized via Docker:'
     },
-    copyText: (url: string, runMode: 'python' | 'docker') => 
-      runMode === 'python'
-        ? `[mcp_servers.devbrain]\ncommand = "python"\nargs = ["-m", "backend.mcp_server"]\nenv = { "DEVBRAIN_API_URL" = "${url}" }`
-        : `[mcp_servers.devbrain]\ncommand = "docker"\nargs = ["run", "-i", "--rm", "-e", "DEVBRAIN_API_URL=${url}", "devbrain", "python", "-m", "backend.mcp_server"]`,
+    copyText: (url: string, runMode: 'python' | 'docker') => {
+      return runMode === 'python'
+        ? `[mcp_servers.devbrain]\ncommand = "python"\nargs = ["-m", "backend.mcp_server"]\nenv = { "DEVBRAIN_API_URL" = "${url}", "GITHUB_TOKEN" = "ghp_your_github_token_here" }`
+        : `[mcp_servers.devbrain]\ncommand = "docker"\nargs = ["run", "-i", "--rm", "-e", "DEVBRAIN_API_URL=${url}", "-e", "GITHUB_TOKEN=ghp_your_github_token_here", "devbrain", "python", "-m", "backend.mcp_server"]`;
+    },
     mode: 'toml',
   },
   {
@@ -46,10 +48,11 @@ const AGENTS = [
       python: '1. Open Cursor Settings (click the gear icon in the top right or use shortcut).\n2. Navigate to Features > MCP in the sidebar.\n3. Click "+ Add New MCP Server".\n4. Set Name: "devbrain", Type: "command", and paste the following Python command:',
       docker: '1. Make sure Docker is running on your machine.\n2. Open Cursor Settings and navigate to Features > MCP in the sidebar.\n3. Click "+ Add New MCP Server".\n4. Set Name: "devbrain", Type: "command", and paste the following Docker run command:'
     },
-    copyText: (url: string, runMode: 'python' | 'docker') => 
-      runMode === 'python'
-        ? `python -m backend.mcp_server`
-        : `docker run -i --rm -e DEVBRAIN_API_URL="${url}" devbrain python -m backend.mcp_server`,
+    copyText: (url: string, runMode: 'python' | 'docker') => {
+      return runMode === 'python'
+        ? `GITHUB_TOKEN="ghp_your_github_token_here" python -m backend.mcp_server`
+        : `docker run -i --rm -e DEVBRAIN_API_URL="${url}" -e GITHUB_TOKEN="ghp_your_github_token_here" devbrain python -m backend.mcp_server`;
+    },
     mode: 'command',
   },
   {
@@ -61,15 +64,16 @@ const AGENTS = [
       python: '1. Open your global or project-level opencode.jsonc file.\n2. Locate the "mcp" config key.\n3. Paste the following JSON block under the mcp definition:',
       docker: '1. Make sure Docker is running on your machine.\n2. Open your global or project-level opencode.jsonc file.\n3. Paste the following JSON block under the mcp definition to connect DevBrain via Docker:'
     },
-    copyText: (url: string, runMode: 'python' | 'docker') => 
-      runMode === 'python'
+    copyText: (url: string, runMode: 'python' | 'docker') => {
+      return runMode === 'python'
         ? JSON.stringify({
             "devbrain": {
               "type": "local",
               "command": ["python", "-m", "backend.mcp_server"],
               "enabled": true,
               "environment": {
-                "DEVBRAIN_API_URL": url
+                "DEVBRAIN_API_URL": url,
+                "GITHUB_TOKEN": 'ghp_your_github_token_here'
               }
             }
           }, null, 2)
@@ -83,12 +87,15 @@ const AGENTS = [
                 "--rm",
                 "-e",
                 `DEVBRAIN_API_URL=${url}`,
+                "-e",
+                `GITHUB_TOKEN=ghp_your_github_token_here`,
                 "devbrain",
                 "python", "-m", "backend.mcp_server"
               ],
               "enabled": true
             }
-          }, null, 2),
+          }, null, 2);
+    },
     mode: 'json',
   },
   {
@@ -100,15 +107,16 @@ const AGENTS = [
       python: '1. Open your Zed configuration file (Command Palette > "zed: open settings" or Ctrl/Cmd + ,).\n2. Locate the "context_servers" block.\n3. Paste the following JSON server definition inside the context_servers section:',
       docker: '1. Make sure Docker is running on your machine.\n2. Open your Zed settings configuration file.\n3. Locate the "context_servers" block.\n4. Paste the following JSON block to run the server inside Docker:'
     },
-    copyText: (url: string, runMode: 'python' | 'docker') => 
-      runMode === 'python'
+    copyText: (url: string, runMode: 'python' | 'docker') => {
+      return runMode === 'python'
         ? JSON.stringify({
             "devbrain": {
               "command": {
                 "path": "python",
                 "args": ["-m", "backend.mcp_server"],
                 "env": {
-                  "DEVBRAIN_API_URL": url
+                  "DEVBRAIN_API_URL": url,
+                  "GITHUB_TOKEN": 'ghp_your_github_token_here'
                 }
               }
             }
@@ -123,12 +131,15 @@ const AGENTS = [
                   "--rm",
                   "-e",
                   `DEVBRAIN_API_URL=${url}`,
+                  "-e",
+                  `GITHUB_TOKEN=ghp_your_github_token_here`,
                   "devbrain",
                   "python", "-m", "backend.mcp_server"
                 ]
               }
             }
-          }, null, 2),
+          }, null, 2);
+    },
     mode: 'json',
   },
   {
@@ -140,14 +151,14 @@ const AGENTS = [
       python: '1. Open your VS Code settings (JSON) or .vscode/mcp.json.\n2. Locate the "servers" section under "mcp".\n3. Paste the following JSON server definition to connect DevBrain via local Python:',
       docker: '1. Make sure Docker is running on your machine.\n2. Open your VS Code settings or .vscode/mcp.json.\n3. Paste the following JSON block to run DevBrain containerized via Docker:'
     },
-    copyText: (url: string, runMode: 'python' | 'docker') =>
-      runMode === 'python'
+    copyText: (url: string, runMode: 'python' | 'docker') => {
+      return runMode === 'python'
         ? JSON.stringify({
             "servers": {
               "devbrain": {
                 "command": "python",
                 "args": ["-m", "backend.mcp_server"],
-                "env": { "DEVBRAIN_API_URL": url }
+                "env": { "DEVBRAIN_API_URL": url, "GITHUB_TOKEN": 'ghp_your_github_token_here' }
               }
             }
           }, null, 2)
@@ -155,10 +166,11 @@ const AGENTS = [
             "servers": {
               "devbrain": {
                 "command": "docker",
-                "args": ["run", "-i", "--rm", "-e", `DEVBRAIN_API_URL=${url}`, "devbrain", "python", "-m", "backend.mcp_server"]
+                "args": ["run", "-i", "--rm", "-e", `DEVBRAIN_API_URL=${url}`, "-e", `GITHUB_TOKEN=ghp_your_github_token_here`, "devbrain", "python", "-m", "backend.mcp_server"]
               }
             }
-          }, null, 2),
+          }, null, 2);
+    },
     mode: 'json',
   },
   {
@@ -169,10 +181,11 @@ const AGENTS = [
       python: '1. Ensure the Antigravity CLI is installed locally.\n2. Open your project directory in the terminal.\n3. Run the following command to register DevBrain as an MCP server:',
       docker: '1. Ensure the Antigravity CLI is installed and Docker is running.\n2. Open your project directory in the terminal.\n3. Run the command below to connect DevBrain containerized via Docker:'
     },
-    copyText: (url: string, runMode: 'python' | 'docker') => 
-      runMode === 'python'
-        ? `agy mcp add devbrain -e DEVBRAIN_API_URL="${url}" -- python -m backend.mcp_server`
-        : `agy mcp add devbrain -- docker run -i --rm -e DEVBRAIN_API_URL="${url}" devbrain python -m backend.mcp_server`,
+    copyText: (url: string, runMode: 'python' | 'docker') => {
+      return runMode === 'python'
+        ? `agy mcp add devbrain -e DEVBRAIN_API_URL="${url}" -e GITHUB_TOKEN="ghp_your_github_token_here" -- python -m backend.mcp_server`
+        : `agy mcp add devbrain -- docker run -i --rm -e DEVBRAIN_API_URL="${url}" -e GITHUB_TOKEN="ghp_your_github_token_here" devbrain python -m backend.mcp_server`;
+    },
     mode: 'shell',
   },
   {
@@ -183,14 +196,14 @@ const AGENTS = [
       python: '1. For any MCP-compatible client not listed above.\n2. Add a new MCP server in your client\'s configuration (JSON, settings, or UI).\n3. Use the following config to point at DevBrain via local Python:',
       docker: '1. For any MCP-compatible client not listed above.\n2. Make sure Docker is running on your machine.\n3. Use the following config to point at DevBrain via Docker:'
     },
-    copyText: (url: string, runMode: 'python' | 'docker') =>
-      runMode === 'python'
+    copyText: (url: string, runMode: 'python' | 'docker') => {
+      return runMode === 'python'
         ? JSON.stringify({
             "mcpServers": {
               "devbrain": {
                 "command": "python",
                 "args": ["-m", "backend.mcp_server"],
-                "env": { "DEVBRAIN_API_URL": url }
+                "env": { "DEVBRAIN_API_URL": url, "GITHUB_TOKEN": 'ghp_your_github_token_here' }
               }
             }
           }, null, 2)
@@ -198,10 +211,11 @@ const AGENTS = [
             "mcpServers": {
               "devbrain": {
                 "command": "docker",
-                "args": ["run", "-i", "--rm", "-e", `DEVBRAIN_API_URL=${url}`, "devbrain", "python", "-m", "backend.mcp_server"]
+                "args": ["run", "-i", "--rm", "-e", `DEVBRAIN_API_URL=${url}`, "-e", `GITHUB_TOKEN=ghp_your_github_token_here`, "devbrain", "python", "-m", "backend.mcp_server"]
               }
             }
-          }, null, 2),
+          }, null, 2);
+    },
     mode: 'json',
   },
 ];
@@ -355,7 +369,7 @@ function HighlightedCode({ code, mode }: { code: string; mode: string }) {
   }
 
   if (mode === 'shell') {
-    const tokens = code.split(/(claude|agy|python|pip|-s|-e|--|DEVBRAIN_API_URL=|\".*?\")/g);
+    const tokens = code.split(/(claude|agy|python|pip|-s|-e|--|DEVBRAIN_API_URL=|GITHUB_TOKEN=|\".*?\")/g);
     return (
       <>
         {tokens.map((token, i) => {
@@ -365,7 +379,24 @@ function HighlightedCode({ code, mode }: { code: string; mode: string }) {
           if (['-s', '-e', '--'].includes(token)) {
             return <span key={i} className="text-[#0891b2] dark:text-[#22d3ee] font-semibold">{token}</span>;
           }
-          if (token === 'DEVBRAIN_API_URL=') {
+          if (token === 'DEVBRAIN_API_URL=' || token === 'GITHUB_TOKEN=') {
+            return <span key={i} className="text-[#8b5cf6] dark:text-[#a78bfa] font-semibold">{token}</span>;
+          }
+          if (token.startsWith('"') && token.endsWith('"')) {
+            return <span key={i} className="text-[#ea580c] dark:text-[#f97316]">{token}</span>;
+          }
+          return <span key={i}>{token}</span>;
+        })}
+      </>
+    );
+  }
+
+  if (mode === 'command') {
+    const tokens = code.split(/(DEVBRAIN_API_URL=|GITHUB_TOKEN=|\".*?\")/g);
+    return (
+      <>
+        {tokens.map((token, i) => {
+          if (token === 'DEVBRAIN_API_URL=' || token === 'GITHUB_TOKEN=') {
             return <span key={i} className="text-[#8b5cf6] dark:text-[#a78bfa] font-semibold">{token}</span>;
           }
           if (token.startsWith('"') && token.endsWith('"')) {
@@ -529,6 +560,8 @@ export default function ConfigSheet({ instance, onClose }: ConfigSheetProps) {
                 <CopyButton text={instance.api_url} label="Copy" compact={true} />
               </div>
             </div>
+
+
           </motion.div>
 
           {/* Stepper */}

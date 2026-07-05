@@ -140,6 +140,7 @@ class CreateInstanceRequest(BaseModel):
     repo: str
     github_token: str
     cognee_api_key: Optional[str] = None
+    cognee_url: Optional[str] = None
     gemini_api_key: Optional[str] = None
     webhook_secret: Optional[str] = None
 
@@ -200,6 +201,7 @@ async def create_instance(
     secrets_dict = {
         "github_token":   req.github_token,
         "cognee_api_key": req.cognee_api_key or "",
+        "cognee_url":     req.cognee_url or "",
         "gemini_api_key": req.gemini_api_key or "",
         "webhook_secret": req.webhook_secret or secrets.token_hex(16),
     }

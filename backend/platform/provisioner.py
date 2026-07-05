@@ -40,6 +40,19 @@ def _find_free_port(used_ports: set[int]) -> int:
     raise RuntimeError(f"No free ports available in {PLATFORM_PORT_START}-{PLATFORM_PORT_END}")
 
 
+def _ensure_network_attached(container_name: str) -> None:
+    """Verify the container is on the platform network; connect if not."""
+    client = _docker_client()
+    try:
+        container = client.containers.get(container_name)
+        networks = container.attrs["NetworkSettings"]["Networks"] or {}
+        if PLATFORM_NETWORK not in networks:
+            client.networks.get(PLATFORM_NETWORK).connect(container)
+            logger.info("Attached %s to network %s", container_name, PLATFORM_NETWORK)
+    except Exception as exc:
+        logger.warning("Could not verify network for %s: %s", container_name, exc)
+
+
 async def provision_instance(instance_id: str, repo: str, port: int, secrets: dict) -> dict:
     """
     Provision three Docker containers for a tenant:
@@ -62,6 +75,7 @@ async def provision_instance(instance_id: str, repo: str, port: int, secrets: di
     env = {
         "GITHUB_TOKEN":          secrets.get("github_token", ""),
         "COGNEE_API_KEY":        secrets.get("cognee_api_key", ""),
+        "COGNEE_BASE_URL":       secrets.get("cognee_url", ""),
         "GEMINI_API_KEY":        secrets.get("gemini_api_key", ""),
         "LLM_PROVIDER":          os.getenv("LLM_PROVIDER", "gemini") if secrets.get("gemini_api_key") else "openai",
         "LLM_MODEL":             os.getenv("LLM_MODEL", "gemini/gemini-3.1-flash-lite") if secrets.get("gemini_api_key") else "openai/gpt-4o",
@@ -88,6 +102,7 @@ async def provision_instance(instance_id: str, repo: str, port: int, secrets: di
         existing = client.containers.get(redis_name)
         if existing.status != "running":
             existing.start()
+        _ensure_network_attached(redis_name)
         logger.info("Redis container %s already exists", redis_name)
     except Exception:
         client.containers.run(
@@ -97,6 +112,7 @@ async def provision_instance(instance_id: str, repo: str, port: int, secrets: di
             network=PLATFORM_NETWORK,
             restart_policy={"Name": "unless-stopped"},
         )
+        _ensure_network_attached(redis_name)
         logger.info("Started Redis container: %s", redis_name)
 
     # 2. API
@@ -104,6 +120,7 @@ async def provision_instance(instance_id: str, repo: str, port: int, secrets: di
         existing = client.containers.get(api_name)
         if existing.status != "running":
             existing.start()
+        _ensure_network_attached(api_name)
         logger.info("API container %s already exists", api_name)
     except Exception:
         client.containers.run(
@@ -116,6 +133,7 @@ async def provision_instance(instance_id: str, repo: str, port: int, secrets: di
             volumes=volumes,
             restart_policy={"Name": "unless-stopped"},
         )
+        _ensure_network_attached(api_name)
         logger.info("Started API container: %s on port %d", api_name, port)
 
     # 3. Worker
@@ -123,6 +141,7 @@ async def provision_instance(instance_id: str, repo: str, port: int, secrets: di
         existing = client.containers.get(worker_name)
         if existing.status != "running":
             existing.start()
+        _ensure_network_attached(worker_name)
         logger.info("Worker container %s already exists", worker_name)
     except Exception:
         client.containers.run(
@@ -135,6 +154,7 @@ async def provision_instance(instance_id: str, repo: str, port: int, secrets: di
             volumes=volumes,
             restart_policy={"Name": "unless-stopped"},
         )
+        _ensure_network_attached(worker_name)
         logger.info("Started Worker container: %s", worker_name)
 
     return {

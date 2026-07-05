@@ -217,6 +217,43 @@ async def refresh_memory(repo: str | None = None) -> dict:
 
 
 @mcp.tool()
+async def changelog_generate(
+    repo: str,
+    notify: bool = False,
+) -> dict:
+    """Generate (or regenerate) the global changelog for a repo.
+
+    Fetches all events (commits, PRs, issues, releases) since the last run and
+    writes a structured Markdown changelog file. Optionally notifies subscribed
+    users. Read the result with ``changelog_read``.
+
+    Args:
+        repo: Repository as "owner/repo".
+        notify: Send push notifications to subscribed users after generating.
+    """
+    client = _client()
+    response = await client.post("/changelog/generate", params={"repo": repo, "notify": notify})
+    _raise_for_status(response)
+    return response.json()
+
+
+@mcp.tool()
+async def changelog_read(repo: str) -> dict:
+    """Read the latest global changelog for a repo.
+
+    Returns the raw Markdown content plus metadata (file path, last generated time).
+    Generate it first with ``changelog_generate`` if it does not exist yet.
+
+    Args:
+        repo: Repository as "owner/repo".
+    """
+    client = _client()
+    response = await client.get("/changelog", params={"repo": repo})
+    _raise_for_status(response)
+    return response.json()
+
+
+@mcp.tool()
 async def create_issue(
     repo: str,
     title: str,
