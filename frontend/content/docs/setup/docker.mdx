@@ -1,7 +1,19 @@
 ---
 title: Docker Setup
-description: Deploy DevBrain using Docker Compose.
+description: Deploy DevBrain using Docker.
 ---
+
+<Callout type="tip" title="Pre-built image on Docker Hub">
+Pull the ready-to-use image instead of building locally:
+
+```bash
+docker run -d -p 8000:8000 ayushk1801/devbrain
+```
+
+Available at [hub.docker.com/r/ayushk1801/devbrain](https://hub.docker.com/r/ayushk1801/devbrain).
+</Callout>
+
+## Docker Compose (full stack)
 
 Build and start all services with a single command:
 
