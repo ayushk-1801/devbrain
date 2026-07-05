@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 
 export const PLATFORM_API = 'http://localhost:9000';
 const TOKEN_KEY = 'devbrain_token';
-const DEPLOYED_URL = import.meta.env.VITE_DEPLOYED_URL || '';
+const DEPLOYED_URL = (import.meta.env.VITE_DEPLOYED_URL || '').replace(/\/+$/, '');
 
 interface User {
   id: number;

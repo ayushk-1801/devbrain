@@ -256,7 +256,7 @@ export function Footer() {
   });
 
   const handleCopy = () => {
-    navigator.clipboard.writeText("docker-compose up");
+    navigator.clipboard.writeText("docker run -d -p 8000:8000 ayushk1801/devbrain");
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
@@ -318,12 +318,12 @@ export function Footer() {
           One Docker command. Any GitHub repo.<br />Connects to Claude Code in under 5 minutes.
         </p>
 
-        <button className="bg-btn-dark text-btn-dark-text text-[14px] md:text-[15px] font-medium px-[32px] py-[16px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer mt-10 hover:bg-btn-dark-hover">
+        <Link to="/docs/setup/docker" className="bg-btn-dark text-btn-dark-text text-[14px] md:text-[15px] font-medium px-[32px] py-[16px] rounded-full transition-[background-color,box-shadow] duration-200 cursor-pointer mt-10 hover:bg-btn-dark-hover inline-block no-underline">
           Deploy with Docker
-        </button>
+        </Link>
 
         <div className="mt-8 bg-bg-card border-[1.5px] border-[rgba(4,2,0,0.12)] dark:border-[rgba(255,255,255,0.12)] rounded-[16px] px-[32px] py-[20px] inline-flex items-center gap-4 hover:border-[rgba(4,2,0,0.24)] dark:hover:border-[rgba(255,255,255,0.24)] transition-colors group">
-          <span className="font-code text-[15px] text-text-primary">docker-compose up</span>
+          <span className="font-code text-[15px] text-text-primary">docker run -d -p 8000:8000 ayushk1801/devbrain</span>
           <button 
             onClick={handleCopy} 
             className="text-text-muted group-hover:text-text-primary transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-border rounded"
