@@ -6,6 +6,7 @@ dist/
 build/
 *.egg
 .pytest_cache/
+logs/
 
 # Virtual environment
 .venv/
@@ -16,6 +17,7 @@ venv/
 
 # OpenCode config (local MCP credentials)
 opencode.jsonc
+opencode.json
 
 # Cognee local data
 .cognee/

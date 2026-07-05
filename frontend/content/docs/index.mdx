@@ -44,14 +44,8 @@ Every piece of engineering knowledge lives in three stores, queried simultaneous
   }}
 />
 
-```mermaid
-graph TD
-    A[GitHub Repository] -->|Commits, PRs, ADRs, Code Files| B(DevBrain Ingestion Server)
-    B -->|Structures context into memory payloads| C(Cognee Memory Engine)
-    C -->|Classify, Extract, Embed| D[Vector Store / LanceDB]
-    C -->|Extract Entities, Build Graph| E[Graph Store / Kuzu]
-    C -->|System State & Mappings| F[Relational / SQLite]
-```
+<img src="/arch-diag-light.svg" className="block dark:hidden" alt="DevBrain Ingestion Flow" />
+<img src="/arch-diag-dark.svg" className="hidden dark:block" alt="DevBrain Ingestion Flow" />
 
 ---
 

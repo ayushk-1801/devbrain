@@ -7,17 +7,8 @@ DevBrain is built on a **six-stage ECL pipeline** powered by Cognee's hybrid gra
 
 ## High-Level Flow
 
-```mermaid
-graph TD
-    A[GitHub Repository] -->|Commits, PRs, ADRs, Code Files| B(DevBrain Ingestion Server)
-    B -->|Structures context into memory payloads| C(Cognee Memory Engine)
-    C -->|1. Classify| D[Vector Store / LanceDB]
-    C -->|2. Check Permissions| E[Graph Store / Kuzu]
-    C -->|3. Extract Chunks| F[Relational / SQLite]
-    C -->|4. LLM Extract Entities| D
-    C -->|5. Generate Summaries| E
-    C -->|6. Embed & Commit| F
-```
+<img src="/arch-diag-light.svg" className="block dark:hidden" alt="DevBrain Ingestion Flow" />
+<img src="/arch-diag-dark.svg" className="hidden dark:block" alt="DevBrain Ingestion Flow" />
 
 ## Cognee 6-Stage ECL Pipeline
 
