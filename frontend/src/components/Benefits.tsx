@@ -86,31 +86,31 @@ export function Benefits() {
   return (
     <section ref={containerRef} id="how-it-works" className="relative w-full h-auto lg:h-[250vh] overflow-visible">
       {/* Sticky container that stays in the viewport on desktop */}
-      <div className="relative lg:sticky lg:top-0 lg:left-0 w-full h-auto lg:h-screen overflow-visible lg:overflow-hidden flex flex-col items-center justify-center pt-[80px] md:pt-[100px] pb-[80px] px-6">
+      <div className="benefits-sticky-container relative lg:sticky lg:top-0 lg:left-0 w-full h-auto lg:h-screen overflow-visible lg:overflow-hidden flex flex-col items-center justify-center pt-[80px] md:pt-[100px] lg:pt-[6vh] lg:pb-[4vh] px-6">
         
         <motion.div 
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-          className="flex flex-col items-center text-center w-full max-w-[800px] z-10 lg:-mt-16"
+          className="flex flex-col items-center text-center w-full max-w-[800px] z-10 lg:-mt-2 xl:-mt-10"
         >
-          <h2 className="font-display text-[32px] sm:text-[36px] md:text-[56px] lg:text-[60px] font-extrabold text-text-primary leading-[1.1] tracking-tight">
+          <h2 className="benefits-heading font-display text-[32px] sm:text-[36px] md:text-[56px] lg:text-[48px] xl:text-[60px] font-extrabold text-text-primary leading-[1.1] tracking-tight">
             Engineered for Complete Codebase Intelligence
           </h2>
-          <p className="font-display text-[16px] md:text-[18px] text-text-muted max-w-[640px] mt-6 leading-[1.7]">
+          <p className="benefits-paragraph font-display text-[16px] md:text-[18px] text-text-muted max-w-[640px] mt-4 lg:mt-5 leading-[1.7]">
             A hybrid memory layer mapping commits, pull requests, ADRs, and code AST into a single queryable knowledge graph.
           </p>
         </motion.div>
 
         {/* Stacked Cards Container */}
-        <div className="w-full relative min-h-[580px] md:min-h-[520px] mt-[40px] max-w-[1000px] mx-auto hidden lg:block">
+        <div className="w-full relative min-h-[540px] md:min-h-[500px] mt-[30px] lg:mt-[4vh] xl:mt-10 max-w-[1000px] mx-auto hidden lg:block">
           {benefits.map((card, idx) => {
             const Icon = card.icon;
             
             // Calculate diagonal offsets
             const xOffset = (4 - idx) * 160;
-            const yOffset = (4 - idx) * 48;
+            const yOffset = (4 - idx) * 40;
 
             return (
               <motion.div
@@ -123,7 +123,7 @@ export function Benefits() {
                   opacity: opacities[idx],
                   y: yTransforms[idx]
                 }}
-                className={`w-[480px] rounded-[24px] p-8 md:p-10 border-[12px] border-bg shadow-none transition-colors duration-300 ${
+                className={`w-[480px] rounded-[24px] p-6 lg:p-6 xl:p-8 border-[12px] border-bg shadow-none transition-colors duration-300 ${
                   activeIndex === idx
                     ? idx === 4 ? 'bg-accent-mint text-[#040200]'
                       : idx === 3 ? 'bg-accent-powder text-[#040200]'
@@ -148,7 +148,7 @@ export function Benefits() {
           <motion.div 
             style={{
               position: 'absolute',
-              top: 490, // 192 (yOffset of Card 0) + 274 (card height estimate) + 24 (gap)
+              top: 480, // 160 (yOffset of Card 0) + 296 (card height estimate) + 24 (gap)
               left: 'calc(50% - 240px + 320px)', // matches left calculation of Card 0 (xOffset = 640)
               opacity: opacity0,
               y: y0,
